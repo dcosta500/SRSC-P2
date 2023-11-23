@@ -3,40 +3,40 @@ package servers.MainDispatcher;
 import javax.net.ServerSocketFactory;
 import javax.net.ssl.*;
 
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileInputStream;
+import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 
-public class TlsServer {
-    private static final boolean DO_CLIENT_AUTH = true;
+public class MainDispatcherServer {
+
+    private static final int PORT_NUMBER = 8080;
+
+    private static final int DATA_SIZE = 2048;
+
+    private static final String SERVER_TRUSTSTORE_PATH = "../../certs/mdCrypto/md_truststore";
     private static final String SERVER_KEYSTORE_PATH = "../../certs/mdCrypto/keystore_md.jks";
     private static final String PASSWORD = "md123456";
+
+    private static final boolean DO_CLIENT_AUTH = true;
 
     // tls: { command(int) | length(int) | content(byte[]) }
 
     public static void main(String[] args) throws Exception {
 
-        if (args.length < 1) {
-            System.out.println("Please provide a port number.");
-            return;
-        }
-
-        int portNumber = Integer.parseInt(args[0]);
+        System.setProperty("javax.net.ssl.trustStore", SERVER_TRUSTSTORE_PATH);
 
         ServerSocket ss = null;
         try {
             ServerSocketFactory ssf = getServerSocketFactory();
-            ss = ssf.createServerSocket(portNumber);
+            ss = ssf.createServerSocket(PORT_NUMBER);
 
-            // This server only enables TLSv1.2
-            // and the cipher suite below
             ((SSLServerSocket) ss).setEnabledProtocols(new String[] { "TLSv1.2" });
             ((SSLServerSocket) ss).setEnabledCipherSuites(new String[] { "TLS_RSA_WITH_AES_128_GCM_SHA256" });
             ((SSLServerSocket) ss).setNeedClientAuth(DO_CLIENT_AUTH);
@@ -52,30 +52,20 @@ public class TlsServer {
                 socket = ss.accept();
                 System.out.println("Accepted a connection.");
             } catch (IOException e) {
-                System.out.println("Class Server died: " + e.getMessage());
+                System.out.println("Server died: " + e.getMessage());
                 e.printStackTrace();
                 break;
             }
-
-            // ss accepts into a new thread and goes right back to accepting requests
-            // that thread will take care of the request and send getVersion value
-
-            //ReadMessage
-            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            // TODO: 
-            String message = in.readLine();
 
             new Thread() {
                 @Override
                 public void run() {
                     try {
-                        PrintWriter out = new PrintWriter(
-                                new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())));
+                        byte[] dataIn = receiveData(socket);
+                        DataPackage dp = DataPackage.parse(dataIn);
 
-                        String response = execute(message);
-                        out.println(response);
-                        out.flush();
-                        Thread.sleep(5000);
+                        byte[] result = execute(dp);
+                        sendData(socket, result);
 
                         socket.close();
                     } catch (Exception e) {
@@ -85,41 +75,44 @@ public class TlsServer {
             }.start();
         }
         ss.close();
-        // Execute
-        /* try {
-            PrintWriter out = new PrintWriter(
-                    new BufferedWriter(
-                            new OutputStreamWriter(
-                                    socket.getOutputStream())));
-            //DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-        
-            try {
-                out.println("Hi!");
-                out.flush();
-            } catch (Exception e) {
-                e.printStackTrace();
-                // write out error response
-                out.println("Error");
-                out.flush();
-            }
-        
-        } catch (IOException ex) {
-            // eat exception (could log error to log file, but
-            // write out to stdout for now).
-            System.out.println("error writing response: " + ex.getMessage());
-            ex.printStackTrace();
-        
-        } finally {
-            try {
-                System.out.println("Closing connection...");
-                socket.close();
-            } catch (IOException e) {
-            }
-        } */
     }
 
-    private static String getVersion() {
-        return "v1.0";
+    private static byte[] execute(DataPackage dp) {
+        switch (dp.getCommand()) {
+            case SUM:
+                return MainDispatcher.sum(dp.getContent());
+            case MULT:
+                return MainDispatcher.mult(dp.getContent());
+            case LOGIN:
+                return MainDispatcher.login(dp.getContent());
+            default:
+                return new byte[0];
+        }
+    }
+
+    private static void sendData(Socket socket, byte[] data) {
+        try {
+            OutputStream out = socket.getOutputStream();
+            out.write(data);
+            out.flush();
+        } catch (Exception e) {
+            System.out.println("Could not send data.");
+            e.printStackTrace();
+        }
+    }
+
+    private static byte[] receiveData(Socket socket) {
+        try {
+            InputStream inputStream = socket.getInputStream();
+            byte[] buffer = new byte[DATA_SIZE];
+            int bytesRead = inputStream.read(buffer, 0, buffer.length);
+            System.out.println("Bytes Read: " + bytesRead);
+            return buffer;
+        } catch (Exception e) {
+            System.out.println("Error receiving data.");
+            e.printStackTrace();
+        }
+        return new byte[0];
     }
 
     private static ServerSocketFactory getServerSocketFactory() {
@@ -151,7 +144,4 @@ public class TlsServer {
         }
     }
 
-    private static String execute(String input) {
-        return "Hello: " + input;
-    }
 }

@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Define entity info
-
 clients_array=("alice" "bob" "carol")
 
 # Issued Questionaire Answers
