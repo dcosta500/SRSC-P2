@@ -1,0 +1,1 @@
+java -Djavax.net.ssl.trustStore="../certs/clients/aliceCrypto/alice_cl_truststore" TlsClient.java localhost 8080

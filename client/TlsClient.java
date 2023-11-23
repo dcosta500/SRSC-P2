@@ -1,3 +1,5 @@
+package client;
+
 import javax.net.ssl.*;
 
 import java.io.BufferedReader;
@@ -11,8 +13,7 @@ import java.security.KeyStore;
 
 public class TlsClient {
 
-    //private static final String CLIENT_KEYSTORE_PATH = "certs/clients/aliceCrypto/selfsigned_alice_cl.jks";
-    private static final String CLIENT_KEYSTORE_PATH = "certs/clients/aliceCrypto/keystore_alice_cl.jks";
+    private static final String CLIENT_KEYSTORE_PATH = "../certs/clients/aliceCrypto/keystore_alice_cl.jks";
     private static final String PASSWORD = "cl123456";
 
     public static void main(String[] args) throws Exception {
@@ -58,7 +59,7 @@ public class TlsClient {
                     new BufferedWriter(
                             new OutputStreamWriter(
                                     socket.getOutputStream())));
-            out.println("Hello");
+            out.println(args[2]);
             out.flush();
 
             /*

@@ -1,0 +1,1 @@
+java -Djavax.net.ssl.trustStore="../../certs/mdCrypto/md_truststore" TlsServer.java 8080

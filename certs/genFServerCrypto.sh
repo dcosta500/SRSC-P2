@@ -2,7 +2,7 @@
 
 # Define entity info
 
-clients_array=("alice")
+clients_array=("alice" "bob" "carol")
 
 # Issued Questionaire Answers
 owner_name="Tomé Filipe Vasco da Costa" # First and Last name
