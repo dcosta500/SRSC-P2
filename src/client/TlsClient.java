@@ -2,6 +2,8 @@ package client;
 
 import javax.net.ssl.*;
 
+import utils.CommonValues;
+
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -13,13 +15,6 @@ import java.security.KeyStore;
 import java.util.Scanner;
 
 public class TlsClient {
-    private static final String HOSTNAME = "localhost";
-    private static final int PORT_NUMBER = 8080;
-
-    private static final int DATA_SIZE = 2048;
-    private static final int OK_CODE = 0;
-    private static final int ERROR_CODE = -1;
-
     private static SSLSocketFactory factory;
     private static SSLSocket socket;
     private static final String PASSWORD = "cl123456";
@@ -31,9 +26,9 @@ public class TlsClient {
             return;
         }
 
-        String client_keystore_path = String.format("../certs/clients/%sCrypto/keystore_%s_cl.jks", args[0], args[0]);
+        String client_keystore_path = String.format("certs/clients/%sCrypto/keystore_%s_cl.jks", args[0], args[0]);
         System.setProperty("javax.net.ssl.trustStore",
-                String.format("../certs/clients/%sCrypto/%s_cl_truststore", args[0], args[0]));
+                String.format("certs/clients/%sCrypto/%s_cl_truststore", args[0], args[0]));
 
         try {
             factory = buildFactory(client_keystore_path);
@@ -114,7 +109,7 @@ public class TlsClient {
         ResponsePackage rp = ResponsePackage.parse(dataIn);
 
         // ===== Unpack Response =====
-        if (rp.getCode() == ERROR_CODE) {
+        if (rp.getCode() == CommonValues.ERROR_CODE) {
             System.out.println("Error code received. Aborting...");
             return;
         }
@@ -146,7 +141,7 @@ public class TlsClient {
         ResponsePackage rp = ResponsePackage.parse(dataIn);
 
         // ===== Unpack Response =====
-        if (rp.getCode() == ERROR_CODE) {
+        if (rp.getCode() == CommonValues.ERROR_CODE) {
             System.out.println("Error code received. Aborting...");
             return;
         }
@@ -181,7 +176,7 @@ public class TlsClient {
         ResponsePackage rp = ResponsePackage.parse(dataIn);
 
         // ===== Unpack Response =====
-        if (rp.getCode() == ERROR_CODE) {
+        if (rp.getCode() == CommonValues.ERROR_CODE) {
             System.out.println("Error code received. Aborting...");
             return;
         }
@@ -211,7 +206,7 @@ public class TlsClient {
     private static byte[] receiveData() {
         try {
             InputStream inputStream = socket.getInputStream();
-            byte[] data = new byte[DATA_SIZE];
+            byte[] data = new byte[CommonValues.DATA_SIZE];
             int bytesRead = inputStream.read(data, 0, data.length);
             return data;
         } catch (Exception e) {
@@ -224,7 +219,7 @@ public class TlsClient {
     // Builds package ready to be sent
     private static byte[] buildPackage(Command command, byte[] content) {
         // { Command(int) | Length(int) | Content(byte[])}
-        byte[] data = new byte[DATA_SIZE];
+        byte[] data = new byte[CommonValues.DATA_SIZE];
         ByteBuffer bb = ByteBuffer.wrap(data);
 
         bb.putInt(0, command.ordinal());
@@ -262,8 +257,8 @@ public class TlsClient {
 
     private static void startNewConnection() {
         try {
-            socket = (SSLSocket) factory.createSocket(HOSTNAME,
-                    PORT_NUMBER);
+            socket = (SSLSocket) factory.createSocket(CommonValues.MD_HOSTNAME,
+                    CommonValues.MD_PORT_NUMBER);
             socket.startHandshake();
         } catch (Exception e) {
             System.out.println("Unable to start connection.");

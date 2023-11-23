@@ -1,4 +1,4 @@
-package servers.MainDispatcher;
+package servers.AuthenticationServer;
 
 import javax.net.ServerSocketFactory;
 import javax.net.ssl.*;
@@ -16,11 +16,11 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 
-public class MainDispatcherServer {
+public class ASServer {
 
-    private static final String SERVER_TRUSTSTORE_PATH = "certs/mdCrypto/md_truststore";
-    private static final String SERVER_KEYSTORE_PATH = "certs/mdCrypto/keystore_md.jks";
-    private static final String PASSWORD = "md123456";
+    private static final String SERVER_TRUSTSTORE_PATH = "../../certs/asCrypto/as_truststore";
+    private static final String SERVER_KEYSTORE_PATH = "../../certs/asCrypto/keystore_as.jks";
+    private static final String PASSWORD = "as123456";
 
     private static final boolean DO_CLIENT_AUTH = true;
 
@@ -31,7 +31,7 @@ public class MainDispatcherServer {
         ServerSocket ss = null;
         try {
             ServerSocketFactory ssf = getServerSocketFactory();
-            ss = ssf.createServerSocket(CommonValues.MD_PORT_NUMBER);
+            ss = ssf.createServerSocket(CommonValues.AS_PORT_NUMBER);
 
             ((SSLServerSocket) ss).setEnabledProtocols(new String[] { "TLSv1.2" });
             ((SSLServerSocket) ss).setEnabledCipherSuites(new String[] { "TLS_RSA_WITH_AES_128_GCM_SHA256" });
@@ -75,12 +75,8 @@ public class MainDispatcherServer {
 
     private static byte[] execute(DataPackage dp) {
         switch (dp.getCommand()) {
-            case SUM:
-                return MainDispatcher.sum(dp.getContent());
-            case MULT:
-                return MainDispatcher.mult(dp.getContent());
             case LOGIN:
-                return MainDispatcher.login(dp.getContent());
+                return AuthenticationServer.login(dp.getContent());
             default:
                 return new byte[0];
         }
