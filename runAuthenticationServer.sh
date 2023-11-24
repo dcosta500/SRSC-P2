@@ -1,3 +1,3 @@
 #!/bin/bash
 
-java -cp out servers.AuthenticationServer.AuthenticationServer
+java -cp out servers.AuthenticationServer.ASServer

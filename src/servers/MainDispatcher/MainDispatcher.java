@@ -3,6 +3,11 @@ package servers.MainDispatcher;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
+
+import utils.MySSLUtils;
+import utils.Command;
 import utils.CommonValues;
 
 public class MainDispatcher {
@@ -66,23 +71,22 @@ public class MainDispatcher {
         // Output -> content: {string_ac}
 
         // Unpack
-        String message = new String(content, StandardCharsets.UTF_8);
+        SSLSocket socket = startConnectionToASServer();
+        byte[] dataToSend = MySSLUtils.buildPackage(Command.LOGIN, content);
 
-        // Start Method
-        String response = message + "_as";
+        MySSLUtils.sendData(socket, dataToSend);
+        byte[] dataReceived = MySSLUtils.receiveData(socket);
 
-        byte[] resultArray = new byte[CommonValues.DATA_SIZE];
-        ByteBuffer output = ByteBuffer.wrap(resultArray);
+        MySSLUtils.closeConnectionToServer(socket);
 
-        // Result code 
-        output.putInt(0, CommonValues.OK_CODE);
+        return dataReceived;
+    }
 
-        // Length of result
-        output.putInt(Integer.BYTES, response.length());
+    private static SSLSocket startConnectionToASServer() {
+        SSLSocketFactory factory = MySSLUtils.createClientSocketFactory("certs/mdCrypto/keystore_md.jks", "md123456");
+        SSLSocket socket = MySSLUtils.startNewConnectionToServer(factory, CommonValues.AS_HOSTNAME,
+                CommonValues.AS_PORT_NUMBER);
 
-        // Result
-        output.put(2 * Integer.BYTES, response.getBytes());
-
-        return resultArray;
+        return socket;
     }
 }
