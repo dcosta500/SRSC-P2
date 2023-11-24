@@ -75,9 +75,25 @@ public class AuthenticationServer {
 
         Key publicKeyS1 = dhKeyPairS1.getPublic();
 
-        // Pack
+        // Pack and Send
+        byte[] publicKeyBytesS1 = publicKeyS1.getEncoded();
+
+        int totalSize = Long.BYTES + Integer.BYTES + publicKeyBytesS1.length;
 
         curIdx = 0;
+        byte[] dataToSendS1 = new byte[totalSize];
+        bb = ByteBuffer.wrap(dataToSendS1);
+
+        bb.putLong(curIdx, srS1);
+        curIdx += Long.BYTES;
+
+        bb.putInt(curIdx, publicKeyBytesS1.length);
+        curIdx += Integer.BYTES;
+
+        bb.put(curIdx, publicKeyBytesS1);
+        curIdx += publicKeyBytesS1.length;
+
+        MySSLUtils.sendData(mdSocket, dataToSendS1);
 
         // ===== RECEIVE 2 =====
         // ===== SEND 2 =====
