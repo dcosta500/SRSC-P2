@@ -6,7 +6,7 @@ public abstract class CommonValues {
     public static final String AC_HOSTNAME = "localhost";
     public static final String SS_HOSTNAME = "localhost";
 
-    public static final int MD_PORT_NUMBER = 8084;
+    public static final int MD_PORT_NUMBER = 8080;
     public static final int AS_PORT_NUMBER = 8081;
     public static final int AC_PORT_NUMBER = 8082;
     public static final int SS_PORT_NUMBER = 8083;

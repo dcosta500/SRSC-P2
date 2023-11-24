@@ -5,9 +5,6 @@ import utils.*;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.Statement;
 
 public class ASServer {
 
@@ -17,14 +14,16 @@ public class ASServer {
 
     private static final boolean DO_CLIENT_AUTH = true;
 
+    private static AuthUsersSQL users;
+
     public static void main(String[] args) throws Exception {
 
         System.setProperty("javax.net.ssl.trustStore", SERVER_TRUSTSTORE_PATH);
 
+        initDb();
+
         ServerSocket ss = MySSLUtils.createServerSocket(CommonValues.AS_PORT_NUMBER, SERVER_KEYSTORE_PATH, PASSWORD,
                 DO_CLIENT_AUTH);
-
-        testSQLite();
 
         while (true) {
             Socket socket;
@@ -70,19 +69,15 @@ public class ASServer {
         }.start();
     }
 
-    private static void testSQLite() {
+    private static void initDb() {
         try {
-            String curDir = System.getProperty("user.dir");
-
             Class.forName("org.sqlite.JDBC");
-            String jdbcUrl = String.format("jdbc:sqlite:%s/%s", curDir, "db/mydb.db");
-            Connection conn = DriverManager.getConnection(jdbcUrl);
-            Statement statement = conn.createStatement();
-            statement.execute("");
-            statement.execute("INSERT INTO person (id,name,age) VALUES ('a', 'b', 18)");
-            conn.close();
+
+            users = new AuthUsersSQL();
+            users.insert("alice", "alice@mail.com", "password", true);
 
         } catch (Exception e) {
+            System.out.println("Error while trying to initialize database.");
             e.printStackTrace();
         }
     }
