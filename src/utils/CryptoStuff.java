@@ -4,6 +4,7 @@ import java.security.Key;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
+import java.security.SecureRandom;
 import java.util.Base64;
 
 import javax.crypto.KeyAgreement;
@@ -12,7 +13,12 @@ public abstract class CryptoStuff {
 
     private static final int DH_KEY_SIZE = 512;
 
-    // ===== HASH =====
+    // ===== Secure Random =====
+    public static long getRandom() {
+        return new SecureRandom().nextLong();
+    }
+
+    // ===== Hash =====
     public static byte[] hash(String content) {
         return hash(content.getBytes());
     }

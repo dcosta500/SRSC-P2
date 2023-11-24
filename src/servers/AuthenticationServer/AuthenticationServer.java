@@ -3,8 +3,13 @@ package servers.AuthenticationServer;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.security.Key;
+import java.security.KeyPair;
 import java.sql.ResultSet;
 
+import javax.crypto.KeyAgreement;
+
+import utils.CryptoStuff;
 import utils.MySQLiteUtils;
 import utils.MySSLUtils;
 
@@ -24,6 +29,7 @@ public class AuthenticationServer {
         */
 
         // ===== RECEIVE 1 =====
+        // Receive-1 -> { len+IPclient || len+uid }
         // Extract
         int curIdx = 0;
         ByteBuffer bb = ByteBuffer.wrap(content);
@@ -46,16 +52,33 @@ public class AuthenticationServer {
 
         // Check
         String conditionR1 = String.format("uid = '%s'", uidR1);
-        ResultSet rs = users.select("uid", conditionR1);
+        ResultSet rs = users.select("uid, canBeAuthenticated", conditionR1);
 
         try {
             if (!rs.next())
+                return MySSLUtils.buildErrorResponse();
+
+            boolean canBeAuthenticated = rs.getBoolean("canBeAuthenticated");
+            if (!canBeAuthenticated)
                 return MySSLUtils.buildErrorResponse();
         } catch (Exception e) {
             e.printStackTrace();
             return MySSLUtils.buildErrorResponse();
         }
+
         // ===== SEND 1 =====
+        // Send-1 -> { Secure Random (long) || len+Yauth }
+        long srS1 = CryptoStuff.getRandom();
+
+        KeyPair dhKeyPairS1 = CryptoStuff.dhGenerateKeyPair();
+        KeyAgreement keyAgreementS1 = CryptoStuff.dhCreateKeyAgreement(dhKeyPairS1);
+
+        Key publicKeyS1 = dhKeyPairS1.getPublic();
+
+        // Pack
+
+        curIdx = 0;
+
         // ===== RECEIVE 2 =====
         // ===== SEND 2 =====
 
