@@ -11,7 +11,8 @@ public abstract class MySQLiteUtils {
 
     /**
      * Delete old db, and create new file
-     * return Connection to that file
+     * @param filename 
+     * @return Connection to the database
      */
     public static Connection resetFile(String filename) {
         try {
@@ -38,12 +39,14 @@ public abstract class MySQLiteUtils {
 
     /**
      * Create a table
-     * Example Values = "uid TEXT PRIMARY KEY, password TEXT"
+     * @param conn  The connection to the database
+     * @param tableName The table name to be created
+     * @param columns The columns of the table, format: "uid TEXT PRIMARY KEY, password TEXT"
      */
-    public static void createTable(Connection conn, String tableName, String values) {
+    public static void createTable(Connection conn, String tableName, String columns) {
         try {
             Statement statement = conn.createStatement();
-            statement.execute(String.format("CREATE TABLE %s (%s)", tableName, values));
+            statement.execute(String.format("CREATE TABLE %s (%s)", tableName, columns));
             statement.close();
         } catch (Exception e) {
             System.out.println("SQLite: Could not create table.");
@@ -53,6 +56,11 @@ public abstract class MySQLiteUtils {
 
     /**
      * Select columns from a table
+     * @param conn  The connection to the database
+     * @param tableName The table name to be created
+     * @param columns The columns of the table, format: "uid,password"
+     * @param condition The condition of selection, format: "uid='1'"
+     * @return The resulting query from the select
      */
     public static ResultSet select(Connection conn, String tableName, String columns, String condition) {
         try {
@@ -69,8 +77,10 @@ public abstract class MySQLiteUtils {
 
     /**
      * Insert an entry into a table
-     * Example Columns = "uid,password"
-     * Example Values = "'a', 'b'"
+     * @param conn  The connection to the database
+     * @param tableName The table name to be created
+     * @param columns The columns of the table, format: "uid,password"
+     * @param values The values to be inserted, format: "name='alice', password='password'"
      */
     public static void insert(Connection conn, String tableName, String columns, String values) {
         try {
@@ -84,8 +94,10 @@ public abstract class MySQLiteUtils {
 
     /**
      * Update an entry in a table
-     * Example Values = "name='alice', password='password'"
-     * Example primaryKeyCondition = "uid='1'"
+     * @param conn  The connection to the database
+     * @param tableName The table name to be created
+     * @param values The values to be inserted, format: "name='alice', password='password'"
+     * @param condition The condition of selection, format: "uid='1'"
      */
     public static void update(Connection conn, String tableName, String values, String condition) {
         try {
@@ -101,7 +113,9 @@ public abstract class MySQLiteUtils {
 
     /**
      * Delete a single entry in a table
-     * Example primaryKeyCondition = "uid='1'"
+     * @param conn  The connection to the database
+     * @param tableName The table name to be created
+     * @param condition The condition of selection, format: "uid='1'"
      */
     public static void delete(Connection conn, String tableName, String condition) {
         try {
@@ -116,6 +130,8 @@ public abstract class MySQLiteUtils {
 
     /**
      * Delete all entrys in a table
+     * @param conn  The connection to the database
+     * @param tableName The table name to be created
      */
     public static void deleteAll(Connection conn, String tableName) {
         try {

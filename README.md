@@ -40,5 +40,4 @@ We recommend first opening other servers, then MainDispatcher and then the clien
 
 ## TODO
 
-Create a .conf file with user name that creates all certificates accordingly
 Check if connection timeouts are needed.

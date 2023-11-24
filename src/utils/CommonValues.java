@@ -11,6 +11,12 @@ public abstract class CommonValues {
     public static final int AC_PORT_NUMBER = 8082;
     public static final int SS_PORT_NUMBER = 8083;
 
+    // Server IDs
+    public static final String AUTH_ID = "auth";
+
+    // Time
+    public static final int TOKEN_VALIDITY_HOURS = 24;
+
     // Packages
     public static final int DATA_SIZE = 2048;
 

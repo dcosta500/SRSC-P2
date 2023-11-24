@@ -20,7 +20,7 @@ public abstract class MySSLUtils {
     public static ServerSocketFactory createServerSocketFactory(String keystorePath, String password) {
         SSLServerSocketFactory ssf = null;
         try {
-            // set up key manager to do server authentication
+            // Set up key manager to do server authentication
             SSLContext ctx;
             KeyManagerFactory kmf;
             KeyStore ks;
