@@ -3,6 +3,8 @@ package utils;
 import java.sql.Statement;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.io.File;
 
 public abstract class MySQLiteUtils {
@@ -47,6 +49,22 @@ public abstract class MySQLiteUtils {
             System.out.println("SQLite: Could not create table.");
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Select columns from a table
+     */
+    public static ResultSet select(Connection conn, String tableName, String columns, String condition) {
+        try {
+            String query = String.format("SELECT %s FROM %s WHERE %s", columns, tableName, condition);
+            PreparedStatement ps = conn.prepareStatement(query);
+            ResultSet rs = ps.executeQuery();
+            return rs;
+        } catch (Exception e) {
+            System.out.println("SQLite: Could not execute query.");
+            e.printStackTrace();
+        }
+        return null;
     }
 
     /**

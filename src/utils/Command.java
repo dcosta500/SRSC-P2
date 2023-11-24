@@ -1,7 +1,7 @@
 package utils;
 
 public enum Command {
-    SUM, MULT, LOGIN;
+    SUM, MULT, STATS, LOGIN;
 
     public static Command getCommandFromOrdinal(int ordinal) {
         for (Command c : Command.values()) {

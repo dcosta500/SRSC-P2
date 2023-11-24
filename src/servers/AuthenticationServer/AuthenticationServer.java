@@ -3,67 +3,63 @@ package servers.AuthenticationServer;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import utils.CommonValues;
+import java.sql.ResultSet;
+
+import utils.MySQLiteUtils;
 import utils.MySSLUtils;
-import utils.ResponsePackage;
 
 public class AuthenticationServer {
 
-    public static byte[] login(Socket mdSocket, byte[] content) {
-        // ByteBuffer input = ByteBuffer.wrap(content);
-        // Input1 -> content: {string}
-        // Output1 -> content: {string_ac}
-        // Input2 -> content: {string_ac}
-        // Output2 -> content: {string_ac_bc}
+    public static byte[] login(Socket mdSocket, AuthUsersSQL users, byte[] content) {
+        /* 
+        * Data flow:
+        * Receive-1 -> { len+IPclient || len+uid }
+        * Send-1 -> { Secure Random (long) || len+Yauth }
+        * Receive-2 -> { len+IPclient || len+Yclient || len+{ Secure Random }Kpwd }
+        * Send-2 -> { len+"auth" || len+Ktoken1024 || len+TSf || Secure Random (long) || len+Kclient,ac }Kdh || 
+        * { len+"auth" || len+Ktoken1024 || len+TSf || Secure Random (long) || len+Kclient,ac }SIGauth
+        *
+        * Ktoken1024 = { { len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac } ||
+        *              { len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }SIGauth } Kac
+        */
 
-        // Unpack
-        String message1 = new String(content, StandardCharsets.UTF_8);
+        // ===== RECEIVE 1 =====
+        // Extract
+        int curIdx = 0;
+        ByteBuffer bb = ByteBuffer.wrap(content);
 
-        // Start Method
-        String response1 = message1 + "_ac";
+        int ipClientLengthR1 = bb.getInt(curIdx);
+        curIdx += Integer.BYTES;
 
-        byte[] resultArray1 = new byte[CommonValues.DATA_SIZE];
-        ByteBuffer output1 = ByteBuffer.wrap(resultArray1);
+        byte[] ipClientBytesR1 = new byte[ipClientLengthR1];
+        bb.get(curIdx, ipClientBytesR1);
+        String ipClientR1 = new String(ipClientBytesR1, StandardCharsets.UTF_8);
+        curIdx += ipClientBytesR1.length;
 
-        // Result code 
-        output1.putInt(0, CommonValues.OK_CODE);
+        int uidLengthR1 = bb.getInt(curIdx);
+        curIdx += Integer.BYTES;
 
-        // Length of result
-        output1.putInt(Integer.BYTES, response1.length());
+        byte[] uidBytesR1 = new byte[uidLengthR1];
+        bb.get(curIdx, uidBytesR1);
+        String uidR1 = new String(uidBytesR1, StandardCharsets.UTF_8);
+        curIdx += uidBytesR1.length;
 
-        // Result
-        output1.put(2 * Integer.BYTES, response1.getBytes());
+        // Check
+        String conditionR1 = String.format("uid = '%s'", uidR1);
+        ResultSet rs = users.select("uid", conditionR1);
 
-        // Send first result to md
-        MySSLUtils.sendData(mdSocket, resultArray1);
+        try {
+            if (!rs.next())
+                return MySSLUtils.buildErrorResponse();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return MySSLUtils.buildErrorResponse();
+        }
+        // ===== SEND 1 =====
+        // ===== RECEIVE 2 =====
+        // ===== SEND 2 =====
 
-        // ===== SECOND TRIP =====
-
-        // Receive second round
-        byte[] secondRoundReceive = MySSLUtils.receiveData(mdSocket);
-
-        ResponsePackage rp = ResponsePackage.parse(secondRoundReceive);
-        content = rp.getContent();
-
-        // Unpack
-        String message2 = new String(content, StandardCharsets.UTF_8);
-
-        // Start Method
-        String response2 = message2 + "_bc";
-
-        byte[] resultArray2 = new byte[CommonValues.DATA_SIZE];
-        ByteBuffer output2 = ByteBuffer.wrap(resultArray2);
-
-        // Result code 
-        output2.putInt(0, CommonValues.OK_CODE);
-
-        // Length of result
-        output2.putInt(Integer.BYTES, response2.length());
-
-        // Result
-        output2.put(2 * Integer.BYTES, response2.getBytes());
-
-        return resultArray2;
+        return new byte[0];
     }
 
 }

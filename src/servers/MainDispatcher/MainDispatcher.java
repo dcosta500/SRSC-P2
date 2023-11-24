@@ -1,5 +1,6 @@
 package servers.MainDispatcher;
 
+import java.net.InetAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 
@@ -63,6 +64,23 @@ public class MainDispatcher {
         output.putInt(2 * Integer.BYTES, result);
 
         return resultArray;
+    }
+
+    public static byte[] clientStats(Socket clientSocket, byte[] content) {
+        try {
+            byte[] contentToSend = new byte[100];
+            byte[] sBytes = clientSocket.getInetAddress().getHostAddress().getBytes();
+
+            ByteBuffer bb = ByteBuffer.wrap(contentToSend);
+            bb.putInt(0, sBytes.length);
+            bb.put(Integer.BYTES, sBytes);
+
+            return MySSLUtils.buildResponse(CommonValues.OK_CODE, contentToSend);
+        } catch (Exception e) {
+            MySSLUtils.printToLogFile("Main Dispatcher", "Error in clientStats method.");
+            e.printStackTrace();
+        }
+        return new byte[0];
     }
 
     public static byte[] login(Socket clientSocket, byte[] content) {

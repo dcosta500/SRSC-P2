@@ -124,6 +124,28 @@ public abstract class MySSLUtils {
         return data;
     }
 
+    public static byte[] buildResponse(int errorCode, byte[] content) {
+        byte[] data = new byte[CommonValues.DATA_SIZE];
+        ByteBuffer bb = ByteBuffer.wrap(data);
+
+        bb.putInt(0, errorCode);
+        bb.putInt(Integer.BYTES, content.length);
+        bb.put(2 * Integer.BYTES, content);
+
+        return data;
+    }
+
+    public static byte[] buildErrorResponse() {
+        byte[] data = new byte[CommonValues.DATA_SIZE];
+        ByteBuffer bb = ByteBuffer.wrap(data);
+
+        bb.putInt(0, CommonValues.ERROR_CODE);
+        bb.putInt(Integer.BYTES, 0);
+        bb.put(2 * Integer.BYTES, new byte[0]);
+
+        return data;
+    }
+
     public static void sendData(Socket socket, byte[] data) {
         try {
             OutputStream out = socket.getOutputStream();

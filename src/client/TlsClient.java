@@ -43,6 +43,9 @@ public class TlsClient {
                 case LOGIN:
                     executeLoginCommand();
                     break;
+                case STATS:
+                    executeStatsCommand();
+                    break;
                 default:
             }
             MySSLUtils.closeConnectionToServer(socket);
@@ -179,6 +182,23 @@ public class TlsClient {
         bb2.get(0, response2);
 
         System.out.println("Response 2: " + new String(response2, StandardCharsets.UTF_8));
+    }
+
+    private static void executeStatsCommand() {
+        byte[] dataToSend = MySSLUtils.buildPackage(Command.STATS, new byte[0]);
+        MySSLUtils.sendData(socket, dataToSend);
+
+        byte[] received = MySSLUtils.receiveData(socket);
+        ResponsePackage rp = ResponsePackage.parse(received);
+        ByteBuffer bb = ByteBuffer.wrap(rp.getContent());
+
+        int length = bb.getInt(0);
+        System.out.println("Length: " + length);
+
+        byte[] ipAddBytes = new byte[length];
+        bb.get(Integer.BYTES, ipAddBytes);
+
+        System.out.println("Ip: " + new String(ipAddBytes, StandardCharsets.UTF_8));
     }
 
     public static void main(String[] args) throws Exception {

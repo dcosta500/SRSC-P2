@@ -1,6 +1,7 @@
 package servers.AuthenticationServer;
 
 import java.sql.Connection;
+import java.sql.ResultSet;
 
 import utils.MySQLiteUtils;
 
@@ -19,6 +20,10 @@ public class AuthUsersSQL {
         con = MySQLiteUtils.resetFile(DB_FILE_NAME);
         MySQLiteUtils.createTable(con, TABLE_NAME,
                 "uid TEXT PRIMARY KEY, email TEXT, hPwd TEXT, canBeAuthenticated BOOLEAN");
+    }
+
+    public ResultSet select(String columns, String condition) {
+        return MySQLiteUtils.select(con, TABLE_NAME, columns, condition);
     }
 
     public void insert(String uid, String email, String hPwd, boolean canBeAuthenticated) {

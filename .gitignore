@@ -92,3 +92,13 @@ out/utils/CryptoStuff.class
 out/utils/MySQLiteUtils.class
 out/utils/MySSLFactory.class
 out/utils/TableSQL.class
+out/client/TlsClient.class
+out/client/TlsClient$1.class
+out/servers/AuthenticationServer/ASServer.class
+out/servers/AuthenticationServer/ASServer$1.class
+out/servers/AuthenticationServer/ASServer$2.class
+out/servers/AuthenticationServer/AuthenticationServer.class
+out/servers/MainDispatcher/MainDispatcher.class
+out/servers/MainDispatcher/MainDispatcherServer.class
+out/servers/MainDispatcher/MainDispatcherServer$1.class
+out/servers/MainDispatcher/MainDispatcherServer$2.class
