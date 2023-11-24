@@ -4,17 +4,10 @@ import javax.net.ServerSocketFactory;
 import javax.net.ssl.*;
 
 import utils.CommonValues;
-
-import java.io.BufferedWriter;
-import java.io.FileInputStream;
-import java.io.FileWriter;
+import utils.MySSLUtils;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
-import java.security.KeyStore;
 
 public class ASServer {
 
@@ -30,7 +23,7 @@ public class ASServer {
 
         ServerSocket ss = null;
         try {
-            ServerSocketFactory ssf = getServerSocketFactory();
+            ServerSocketFactory ssf = MySSLUtils.createServerSocketFactory(SERVER_KEYSTORE_PATH, PASSWORD);
             ss = ssf.createServerSocket(CommonValues.AS_PORT_NUMBER);
 
             ((SSLServerSocket) ss).setEnabledProtocols(new String[] { "TLSv1.2" });
@@ -57,11 +50,11 @@ public class ASServer {
                 @Override
                 public void run() {
                     try {
-                        byte[] dataIn = receiveData(socket);
+                        byte[] dataIn = MySSLUtils.receiveData(socket);
                         DataPackage dp = DataPackage.parse(dataIn);
 
                         byte[] result = execute(dp);
-                        sendData(socket, result);
+                        MySSLUtils.sendData(socket, result);
 
                         socket.close();
                     } catch (Exception e) {
@@ -81,59 +74,4 @@ public class ASServer {
                 return new byte[0];
         }
     }
-
-    private static void sendData(Socket socket, byte[] data) {
-        try {
-            OutputStream out = socket.getOutputStream();
-            out.write(data);
-            out.flush();
-        } catch (Exception e) {
-            System.out.println("Could not send data.");
-            e.printStackTrace();
-        }
-    }
-
-    private static byte[] receiveData(Socket socket) {
-        try {
-            InputStream inputStream = socket.getInputStream();
-            byte[] buffer = new byte[CommonValues.DATA_SIZE];
-            int bytesRead = inputStream.read(buffer, 0, buffer.length);
-            System.out.println("Bytes Read: " + bytesRead);
-            return buffer;
-        } catch (Exception e) {
-            System.out.println("Error receiving data.");
-            e.printStackTrace();
-        }
-        return new byte[0];
-    }
-
-    private static ServerSocketFactory getServerSocketFactory() {
-        SSLServerSocketFactory ssf = null;
-        try {
-            // set up key manager to do server authentication
-            SSLContext ctx;
-            KeyManagerFactory kmf;
-            KeyStore ks;
-
-            // Keystore
-            ks = KeyStore.getInstance("JKS");
-            ks.load(new FileInputStream(SERVER_KEYSTORE_PATH), PASSWORD.toCharArray());
-
-            // Key Manager Factory
-            kmf = KeyManagerFactory.getInstance("SunX509");
-            kmf.init(ks, PASSWORD.toCharArray());
-
-            // Create SLL Context (truststore is added through the java run command
-            // thus there is no need to add it here)
-            ctx = SSLContext.getInstance("TLS");
-            ctx.init(kmf.getKeyManagers(), null, null);
-
-            ssf = ctx.getServerSocketFactory();
-            return ssf;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return SSLServerSocketFactory.getDefault();
-        }
-    }
-
 }

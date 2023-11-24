@@ -2,16 +2,9 @@ package client;
 
 import javax.net.ssl.*;
 
-import utils.CommonValues;
-
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
+import utils.*;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.security.KeyStore;
 import java.util.Scanner;
 
 public class TlsClient {
@@ -31,22 +24,9 @@ public class TlsClient {
                 String.format("certs/clients/%sCrypto/%s_cl_truststore", args[0], args[0]));
 
         try {
-            factory = buildFactory(client_keystore_path);
+            factory = MySSLUtils.createClientSocketFactory(client_keystore_path, PASSWORD);
             readCommands();
-
-            /* read response */
-            BufferedReader in = new BufferedReader(
-                    new InputStreamReader(
-                            socket.getInputStream()));
-
-            String inputLine;
-
-            while ((inputLine = in.readLine()) != null)
-                System.out.println(inputLine);
-
-            in.close();
             socket.close();
-
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -69,7 +49,8 @@ public class TlsClient {
 
         Scanner in = new Scanner(System.in);
         while (true) {
-            startNewConnection();
+            socket = MySSLUtils.startNewConnectionToServer(factory, CommonValues.MD_HOSTNAME,
+                    CommonValues.MD_PORT_NUMBER);
             System.out.print("Command -> ");
             String cmd = in.nextLine();
             switch (Command.valueOf(cmd.toUpperCase())) {
@@ -84,7 +65,7 @@ public class TlsClient {
                     break;
                 default:
             }
-            closeConnection();
+            MySSLUtils.closeConnectionToServer(socket);
         }
     }
 
@@ -102,10 +83,10 @@ public class TlsClient {
 
         // ===== Send Content =====
         byte[] dataOut = buildPackage(Command.SUM, inputContent);
-        sendData(dataOut);
+        MySSLUtils.sendData(socket, dataOut);
 
         // ===== Receive Response =====
-        byte[] dataIn = receiveData();
+        byte[] dataIn = MySSLUtils.receiveData(socket);
         ResponsePackage rp = ResponsePackage.parse(dataIn);
 
         // ===== Unpack Response =====
@@ -134,10 +115,10 @@ public class TlsClient {
 
         // ===== Send Content =====
         byte[] dataOut = buildPackage(Command.MULT, inputContent);
-        sendData(dataOut);
+        MySSLUtils.sendData(socket, dataOut);
 
         // ===== Receive Response =====
-        byte[] dataIn = receiveData();
+        byte[] dataIn = MySSLUtils.receiveData(socket);
         ResponsePackage rp = ResponsePackage.parse(dataIn);
 
         // ===== Unpack Response =====
@@ -169,10 +150,10 @@ public class TlsClient {
 
         // ===== Send Content =====
         byte[] dataOut = buildPackage(Command.LOGIN, inputContent);
-        sendData(dataOut);
+        MySSLUtils.sendData(socket, dataOut);
 
         // ===== Receive Response =====
-        byte[] dataIn = receiveData();
+        byte[] dataIn = MySSLUtils.receiveData(socket);
         ResponsePackage rp = ResponsePackage.parse(dataIn);
 
         // ===== Unpack Response =====
@@ -190,32 +171,6 @@ public class TlsClient {
     }
 
     // ===== AUX METHODS =====
-    // Sends data to socket
-    private static void sendData(byte[] data) {
-        try {
-            OutputStream out = socket.getOutputStream();
-            out.write(data);
-            out.flush();
-        } catch (Exception e) {
-            System.out.println("Error while trying to send data.");
-            e.printStackTrace();
-        }
-    }
-
-    // Receives 2048 bytes from socket
-    private static byte[] receiveData() {
-        try {
-            InputStream inputStream = socket.getInputStream();
-            byte[] data = new byte[CommonValues.DATA_SIZE];
-            int bytesRead = inputStream.read(data, 0, data.length);
-            return data;
-        } catch (Exception e) {
-            System.out.println("Error while trying to send data.");
-            e.printStackTrace();
-        }
-        return new byte[0];
-    }
-
     // Builds package ready to be sent
     private static byte[] buildPackage(Command command, byte[] content) {
         // { Command(int) | Length(int) | Content(byte[])}
@@ -228,51 +183,4 @@ public class TlsClient {
 
         return data;
     }
-
-    private static SSLSocketFactory buildFactory(String clientKeystorePath) {
-        try {
-            // set up key manager to do server authentication
-            SSLContext ctx;
-            KeyManagerFactory kmf;
-            KeyStore ks;
-
-            // Keystore
-            ks = KeyStore.getInstance("JKS");
-            ks.load(new FileInputStream(clientKeystorePath), PASSWORD.toCharArray());
-
-            // Key Manager Factory
-            kmf = KeyManagerFactory.getInstance("SunX509");
-            kmf.init(ks, PASSWORD.toCharArray());
-
-            // Create SLL Context (truststore is added through the java run command
-            // thus there is no need to add it here)
-            ctx = SSLContext.getInstance("TLS");
-            ctx.init(kmf.getKeyManagers(), null, null);
-
-            return ctx.getSocketFactory();
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private static void startNewConnection() {
-        try {
-            socket = (SSLSocket) factory.createSocket(CommonValues.MD_HOSTNAME,
-                    CommonValues.MD_PORT_NUMBER);
-            socket.startHandshake();
-        } catch (Exception e) {
-            System.out.println("Unable to start connection.");
-            e.printStackTrace();
-        }
-    }
-
-    private static void closeConnection() {
-        try {
-            socket.close();
-        } catch (Exception e) {
-            System.out.println("Unable to close connection.");
-            e.printStackTrace();
-        }
-    }
-
 }

@@ -1,4 +1,4 @@
-package servers.MainDispatcher;
+package utils;
 
 public enum Command {
     SUM, MULT, LOGIN;

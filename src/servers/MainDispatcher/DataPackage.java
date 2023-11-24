@@ -2,6 +2,8 @@ package servers.MainDispatcher;
 
 import java.nio.ByteBuffer;
 
+import utils.Command;
+
 public class DataPackage {
 
     private final Command command;
