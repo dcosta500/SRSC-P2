@@ -184,7 +184,7 @@ public class TlsClient {
     public static void main(String[] args) throws Exception {
 
         if (args.length < 1) {
-            System.out.println("Provide a name.");
+            System.out.println("Provide a client name.");
             return;
         }
 

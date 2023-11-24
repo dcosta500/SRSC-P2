@@ -5,6 +5,9 @@ import utils.*;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.Statement;
 
 public class ASServer {
 
@@ -20,6 +23,8 @@ public class ASServer {
 
         ServerSocket ss = MySSLUtils.createServerSocket(CommonValues.AS_PORT_NUMBER, SERVER_KEYSTORE_PATH, PASSWORD,
                 DO_CLIENT_AUTH);
+
+        testSQLite();
 
         while (true) {
             Socket socket;
@@ -63,5 +68,22 @@ public class ASServer {
                 }
             }
         }.start();
+    }
+
+    private static void testSQLite() {
+        try {
+            String curDir = System.getProperty("user.dir");
+
+            Class.forName("org.sqlite.JDBC");
+            String jdbcUrl = String.format("jdbc:sqlite:%s/%s", curDir, "db/mydb.db");
+            Connection conn = DriverManager.getConnection(jdbcUrl);
+            Statement statement = conn.createStatement();
+            statement.execute("");
+            statement.execute("INSERT INTO person (id,name,age) VALUES ('a', 'b', 18)");
+            conn.close();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
