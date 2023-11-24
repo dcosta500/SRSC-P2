@@ -48,8 +48,6 @@ public class AuthenticationServer {
         // Unpack
         String message2 = new String(content, StandardCharsets.UTF_8);
 
-        MySSLUtils.printToLogFile("Authentication Server", "Received message2 content: " + message2);
-
         // Start Method
         String response2 = message2 + "_bc";
 

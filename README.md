@@ -6,6 +6,10 @@ Escrevo este briefing para o menino Tomé Dias, o amor da minha vida <3
 
 Temos todas as bases do trabalho a funcionar, só falta o SQLite (fica a dica para começares a ver disso ;).
 
+O método que usaste para ler exatamente os 2048 bytes funciona na perfeição e faz exatamente aquilo que
+queriamos: esperar até chegarem 2048 bytes e não acançar antes disso (talvez devessemos ver de timeouts
+nas fases finais do projeto, adicionei isso aos TODOs deste ficheiro).
+
 Limpei bastante o código, como te prometi. Podes explorar um bocado e ver que os métodos estão bastante mais
 pequenos. Aprendi a fatorizar variáveis and shit para módulos acima, portanto conseguir refactorizar muita coisa.
 Muitos métodos foram factorizados para o MySSLUtils.java, tornando SUUUUUPER fácil criar um client ou um server
@@ -41,3 +45,4 @@ We recommend first opening other servers, then MainDispatcher and then the clien
 ## TODO
 
 Create a .conf file with user name that creates all certificates accordingly
+Check if connection timeouts are needed.
