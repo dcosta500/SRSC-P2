@@ -8,11 +8,13 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.ByteBuffer;
 import java.security.KeyStore;
 
 import javax.net.ServerSocketFactory;
 
 public abstract class MySSLUtils {
+    // ===== Factories and Connections =====
     public static ServerSocketFactory createServerSocketFactory(String keystorePath, String password) {
         SSLServerSocketFactory ssf = null;
         try {
@@ -105,6 +107,19 @@ public abstract class MySSLUtils {
             System.out.println("Unable to close connection.");
             e.printStackTrace();
         }
+    }
+
+    // ===== Data Methods =====
+    public static byte[] buildPackage(Command command, byte[] content) {
+        // { Command(int) | Length(int) | Content(byte[])}
+        byte[] data = new byte[CommonValues.DATA_SIZE];
+        ByteBuffer bb = ByteBuffer.wrap(data);
+
+        bb.putInt(0, command.ordinal());
+        bb.putInt(Integer.BYTES, content.length);
+        bb.put(2 * Integer.BYTES, content);
+
+        return data;
     }
 
     public static void sendData(Socket socket, byte[] data) {

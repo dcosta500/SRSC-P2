@@ -12,26 +12,6 @@ public class TlsClient {
     private static SSLSocket socket;
     private static final String PASSWORD = "cl123456";
 
-    public static void main(String[] args) throws Exception {
-
-        if (args.length < 1) {
-            System.out.println("Provide a name.");
-            return;
-        }
-
-        String client_keystore_path = String.format("certs/clients/%sCrypto/keystore_%s_cl.jks", args[0], args[0]);
-        System.setProperty("javax.net.ssl.trustStore",
-                String.format("certs/clients/%sCrypto/%s_cl_truststore", args[0], args[0]));
-
-        try {
-            factory = MySSLUtils.createClientSocketFactory(client_keystore_path, PASSWORD);
-            readCommands();
-            socket.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
     private static void readCommands() {
         /*
          * Instructions to add a new command
@@ -82,7 +62,7 @@ public class TlsClient {
         bb.putInt(0, 5);
 
         // ===== Send Content =====
-        byte[] dataOut = buildPackage(Command.SUM, inputContent);
+        byte[] dataOut = MySSLUtils.buildPackage(Command.SUM, inputContent);
         MySSLUtils.sendData(socket, dataOut);
 
         // ===== Receive Response =====
@@ -114,7 +94,7 @@ public class TlsClient {
         bb.putInt(0, 5);
 
         // ===== Send Content =====
-        byte[] dataOut = buildPackage(Command.MULT, inputContent);
+        byte[] dataOut = MySSLUtils.buildPackage(Command.MULT, inputContent);
         MySSLUtils.sendData(socket, dataOut);
 
         // ===== Receive Response =====
@@ -149,7 +129,7 @@ public class TlsClient {
         bb.put(0, message);
 
         // ===== Send Content =====
-        byte[] dataOut = buildPackage(Command.LOGIN, inputContent);
+        byte[] dataOut = MySSLUtils.buildPackage(Command.LOGIN, inputContent);
         MySSLUtils.sendData(socket, dataOut);
 
         // ===== Receive Response =====
@@ -170,17 +150,24 @@ public class TlsClient {
         System.out.println("Response: " + new String(response, StandardCharsets.UTF_8));
     }
 
-    // ===== AUX METHODS =====
-    // Builds package ready to be sent
-    private static byte[] buildPackage(Command command, byte[] content) {
-        // { Command(int) | Length(int) | Content(byte[])}
-        byte[] data = new byte[CommonValues.DATA_SIZE];
-        ByteBuffer bb = ByteBuffer.wrap(data);
+    public static void main(String[] args) throws Exception {
 
-        bb.putInt(0, command.ordinal());
-        bb.putInt(Integer.BYTES, content.length);
-        bb.put(2 * Integer.BYTES, content);
+        if (args.length < 1) {
+            System.out.println("Provide a name.");
+            return;
+        }
 
-        return data;
+        String client_keystore_path = String.format("certs/clients/%sCrypto/keystore_%s_cl.jks", args[0], args[0]);
+        System.setProperty("javax.net.ssl.trustStore",
+                String.format("certs/clients/%sCrypto/%s_cl_truststore", args[0], args[0]));
+
+        try {
+            factory = MySSLUtils.createClientSocketFactory(client_keystore_path, PASSWORD);
+            readCommands();
+            socket.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
+
 }
