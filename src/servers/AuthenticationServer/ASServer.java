@@ -37,10 +37,10 @@ public class ASServer {
         ss.close();
     }
 
-    private static byte[] executeCommand(DataPackage dp) {
+    private static byte[] executeCommand(Socket socket, DataPackage dp) {
         switch (dp.getCommand()) {
             case LOGIN:
-                return AuthenticationServer.login(dp.getContent());
+                return AuthenticationServer.login(socket, dp.getContent());
             default:
                 return new byte[0];
         }
@@ -54,7 +54,7 @@ public class ASServer {
                     byte[] dataIn = MySSLUtils.receiveData(socket);
                     DataPackage dp = DataPackage.parse(dataIn);
 
-                    byte[] result = executeCommand(dp);
+                    byte[] result = executeCommand(socket, dp);
                     MySSLUtils.sendData(socket, result);
 
                     socket.close();

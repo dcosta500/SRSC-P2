@@ -1,7 +1,7 @@
 package servers.MainDispatcher;
 
+import java.net.Socket;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
@@ -65,19 +65,32 @@ public class MainDispatcher {
         return resultArray;
     }
 
-    public static byte[] login(byte[] content) {
+    public static byte[] login(Socket clientSocket, byte[] content) {
         // ByteBuffer input = ByteBuffer.wrap(content);
         // Input -> content: {string}
         // Output -> content: {string_ac}
 
-        // Unpack
-        SSLSocket socket = startConnectionToASServer();
+        // TODO: Give better names to these variables
+
+        // Redirect to AS Server
+        SSLSocket asSocket = startConnectionToASServer();
         byte[] dataToSend = MySSLUtils.buildPackage(Command.LOGIN, content);
 
-        MySSLUtils.sendData(socket, dataToSend);
-        byte[] dataReceived = MySSLUtils.receiveData(socket);
+        MySSLUtils.sendData(asSocket, dataToSend);
 
-        MySSLUtils.closeConnectionToServer(socket);
+        // Redirect response to client
+        byte[] dataReceived = MySSLUtils.receiveData(asSocket);
+        MySSLUtils.sendData(clientSocket, dataReceived);
+
+        // Receive from client and send to as
+        byte[] dataFromClient = MySSLUtils.receiveData(clientSocket);
+        MySSLUtils.sendData(asSocket, dataFromClient);
+        // Send to client again
+        byte[] dataReceived2 = MySSLUtils.receiveData(asSocket);
+        MySSLUtils.sendData(clientSocket, dataReceived2);
+
+        // Close connection
+        MySSLUtils.closeConnectionToServer(asSocket);
 
         return dataReceived;
     }

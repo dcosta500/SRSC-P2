@@ -121,33 +121,64 @@ public class TlsClient {
         // content: {string_ac}
 
         // ===== Build Content Input =====
-        byte[] message = "hello".getBytes();
+        byte[] message1 = "hello".getBytes();
 
-        byte[] inputContent = new byte[message.length];
-        ByteBuffer bb = ByteBuffer.wrap(inputContent);
+        byte[] inputContent1 = new byte[message1.length];
+        ByteBuffer bb1 = ByteBuffer.wrap(inputContent1);
 
-        bb.put(0, message);
+        bb1.put(0, message1);
 
         // ===== Send Content =====
-        byte[] dataOut = MySSLUtils.buildPackage(Command.LOGIN, inputContent);
-        MySSLUtils.sendData(socket, dataOut);
+        byte[] dataOut1 = MySSLUtils.buildPackage(Command.LOGIN, inputContent1);
+        MySSLUtils.sendData(socket, dataOut1);
 
         // ===== Receive Response =====
-        byte[] dataIn = MySSLUtils.receiveData(socket);
-        ResponsePackage rp = ResponsePackage.parse(dataIn);
+        byte[] dataIn1 = MySSLUtils.receiveData(socket);
+        ResponsePackage rp1 = ResponsePackage.parse(dataIn1);
 
         // ===== Unpack Response =====
-        if (rp.getCode() == CommonValues.ERROR_CODE) {
+        if (rp1.getCode() == CommonValues.ERROR_CODE) {
             System.out.println("Error code received. Aborting...");
             return;
         }
 
-        bb = ByteBuffer.wrap(rp.getContent());
+        bb1 = ByteBuffer.wrap(rp1.getContent());
 
-        byte[] response = new byte[rp.getLength()];
-        bb.get(0, response);
+        byte[] response1 = new byte[rp1.getLength()];
+        bb1.get(0, response1);
+        String response1String = new String(response1, StandardCharsets.UTF_8);
 
-        System.out.println("Response: " + new String(response, StandardCharsets.UTF_8));
+        System.out.println("Response 1: " + response1String);
+
+        // ===== Second Round =====
+        // ===== Build Content Input =====
+        byte[] message2 = response1String.getBytes();
+
+        byte[] inputContent2 = new byte[message2.length];
+        ByteBuffer bb2 = ByteBuffer.wrap(inputContent2);
+
+        bb2.put(0, message2);
+
+        // ===== Send Content =====
+        byte[] dataOut2 = MySSLUtils.buildPackage(Command.LOGIN, inputContent2);
+        MySSLUtils.sendData(socket, dataOut2);
+
+        // ===== Receive Response =====
+        byte[] dataIn2 = MySSLUtils.receiveData(socket);
+        ResponsePackage rp2 = ResponsePackage.parse(dataIn2);
+
+        // ===== Unpack Response =====
+        if (rp2.getCode() == CommonValues.ERROR_CODE) {
+            System.out.println("Error code received. Aborting...");
+            return;
+        }
+
+        bb2 = ByteBuffer.wrap(rp2.getContent());
+
+        byte[] response2 = new byte[rp2.getLength()];
+        bb2.get(0, response2);
+
+        System.out.println("Response 2: " + new String(response2, StandardCharsets.UTF_8));
     }
 
     public static void main(String[] args) throws Exception {

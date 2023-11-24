@@ -2,7 +2,9 @@ package utils;
 
 import javax.net.ssl.*;
 
+import java.io.BufferedWriter;
 import java.io.FileInputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -145,5 +147,15 @@ public abstract class MySSLUtils {
             e.printStackTrace();
         }
         return new byte[0];
+    }
+
+    // ===== Debug Methods =====
+    public static void printToLogFile(String author, String message) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("./log.txt", true))) {
+            // Write the line to the file
+            writer.write(String.format("%s: %s.\n", author, message));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

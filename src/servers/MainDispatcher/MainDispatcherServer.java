@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
+import javax.naming.ldap.SortKey;
+
 public class MainDispatcherServer {
 
     private static final String SERVER_TRUSTSTORE_PATH = "certs/mdCrypto/md_truststore";
@@ -37,14 +39,14 @@ public class MainDispatcherServer {
         ss.close();
     }
 
-    private static byte[] executeCommand(DataPackage dp) {
+    private static byte[] executeCommand(Socket socket, DataPackage dp) {
         switch (dp.getCommand()) {
             case SUM:
                 return MainDispatcher.sum(dp.getContent());
             case MULT:
                 return MainDispatcher.mult(dp.getContent());
             case LOGIN:
-                return MainDispatcher.login(dp.getContent());
+                return MainDispatcher.login(socket, dp.getContent());
             default:
                 return new byte[0];
         }
@@ -58,7 +60,7 @@ public class MainDispatcherServer {
                     byte[] dataIn = MySSLUtils.receiveData(socket);
                     DataPackage dp = DataPackage.parse(dataIn);
 
-                    byte[] result = executeCommand(dp);
+                    byte[] result = executeCommand(socket, dp);
                     MySSLUtils.sendData(socket, result);
 
                     socket.close();

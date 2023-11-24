@@ -1,21 +1,22 @@
-package client;
+package utils;
 
 import java.nio.ByteBuffer;
 
-public class ResponsePackage {
+// Package to send
+public class DataPackage {
 
-    private final int code;
+    private final Command command;
     private final int length;
     private final byte[] content;
 
-    public ResponsePackage(int code, int length, byte[] content) {
-        this.code = code;
+    public DataPackage(Command command, int length, byte[] content) {
+        this.command = command;
         this.length = length;
         this.content = content;
     }
 
-    public int getCode() {
-        return this.code;
+    public Command getCommand() {
+        return this.command;
     }
 
     public int getLength() {
@@ -26,15 +27,14 @@ public class ResponsePackage {
         return this.content;
     }
 
-    public static ResponsePackage parse(byte[] data) {
+    public static DataPackage parse(byte[] data) {
         ByteBuffer bb = ByteBuffer.wrap(data);
 
-        int code = bb.getInt(0);
+        Command command = Command.getCommandFromOrdinal(bb.getInt(0));
         int length = bb.getInt(Integer.BYTES);
-
         byte[] content = new byte[length];
         bb.get(2 * Integer.BYTES, content);
 
-        return new ResponsePackage(code, length, content);
+        return new DataPackage(command, length, content);
     }
 }
