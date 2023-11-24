@@ -6,8 +6,6 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-import javax.naming.ldap.SortKey;
-
 public class MainDispatcherServer {
 
     private static final String SERVER_TRUSTSTORE_PATH = "certs/mdCrypto/md_truststore";

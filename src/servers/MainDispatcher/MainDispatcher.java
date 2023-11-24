@@ -70,26 +70,24 @@ public class MainDispatcher {
         // Input -> content: {string}
         // Output -> content: {string_ac}
 
-        // TODO: Give better names to these variables
-
         // Redirect to AS Server
         SSLSocket asSocket = startConnectionToASServer();
         byte[] dataToSend = MySSLUtils.buildPackage(Command.LOGIN, content);
-
         MySSLUtils.sendData(asSocket, dataToSend);
 
         // Redirect response to client
         byte[] dataReceived = MySSLUtils.receiveData(asSocket);
         MySSLUtils.sendData(clientSocket, dataReceived);
 
-        // Receive from client and send to as
+        // Redirect to AS Server
         byte[] dataFromClient = MySSLUtils.receiveData(clientSocket);
         MySSLUtils.sendData(asSocket, dataFromClient);
-        // Send to client again
+
+        // Redirect response to client again
         byte[] dataReceived2 = MySSLUtils.receiveData(asSocket);
         MySSLUtils.sendData(clientSocket, dataReceived2);
 
-        // Close connection
+        // Close connection to AS
         MySSLUtils.closeConnectionToServer(asSocket);
 
         return dataReceived;
