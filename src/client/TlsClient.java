@@ -50,6 +50,7 @@ public class TlsClient {
             }
             MySSLUtils.closeConnectionToServer(socket);
         }
+
     }
 
     private static void executeSumCommand() {

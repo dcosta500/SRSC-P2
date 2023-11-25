@@ -8,6 +8,7 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
 import utils.MySSLUtils;
+import utils.ResponsePackage;
 import utils.Command;
 import utils.CommonValues;
 
@@ -84,31 +85,72 @@ public class MainDispatcher {
     }
 
     public static byte[] login(Socket clientSocket, byte[] content) {
-        // ByteBuffer input = ByteBuffer.wrap(content);
-        // Input -> content: {string}
-        // Output -> content: {string_ac}
-
-        // Redirect to AS Server
+        /**
+        * Data flow (basically add client ip before redirecting to auth server):
+        * Receive-1 -> {len + uid}
+        * Send-1 -> {len+ipClient || len+uid}
+        * Receive-2 -> dont care
+        * Send-2 -> redirect receive-2
+        * Receive-3 -> { len+Yclient || len+{ Secure Random }Kpwd }
+        * Send-3 -> { len+IPclient || len+Yclient || len+{ Secure Random }Kpwd }
+        * Receive-4 -> dont care
+        * Send-4 -> redirect receive-4
+        */
         SSLSocket asSocket = startConnectionToASServer();
-        byte[] dataToSend = MySSLUtils.buildPackage(Command.LOGIN, content);
-        MySSLUtils.sendData(asSocket, dataToSend);
 
-        // Redirect response to client
-        byte[] dataReceived = MySSLUtils.receiveData(asSocket);
-        MySSLUtils.sendData(clientSocket, dataReceived);
+        // ===== Receive 1 =====
+        // ...
 
-        // Redirect to AS Server
-        byte[] dataFromClient = MySSLUtils.receiveData(clientSocket);
-        MySSLUtils.sendData(asSocket, dataFromClient);
+        // ===== Send 1 =====
+        byte[] ipClientBytes_S1 = getClientIPAddress(clientSocket).getBytes();
 
-        // Redirect response to client again
-        byte[] dataReceived2 = MySSLUtils.receiveData(asSocket);
-        MySSLUtils.sendData(clientSocket, dataReceived2);
+        byte[] dataToSend_S1 = new byte[Integer.BYTES + ipClientBytes_S1.length + content.length];
+        ByteBuffer bb = ByteBuffer.wrap(dataToSend_S1);
+
+        int curIdx = 0;
+
+        curIdx = MySSLUtils.putLengthAndBytes(bb, ipClientBytes_S1, curIdx);
+        curIdx = MySSLUtils.putBytes(bb, content, curIdx);
+
+        MySSLUtils.sendData(asSocket, dataToSend_S1);
+
+        // ===== Receive 2 =====
+        content = MySSLUtils.receiveData(asSocket);
+
+        // ===== Send 2 =====
+        MySSLUtils.sendData(clientSocket, content);
+
+        // ===== Receive 3 =====
+        content = MySSLUtils.receiveData(clientSocket);
+
+        // ===== Send 3 =====
+        byte[] dataToSend_S2 = new byte[Integer.BYTES + ipClientBytes_S1.length + content.length];
+        bb = ByteBuffer.wrap(dataToSend_S2);
+
+        curIdx = 0;
+
+        curIdx = MySSLUtils.putLengthAndBytes(bb, ipClientBytes_S1, curIdx);
+        curIdx = MySSLUtils.putBytes(bb, content, curIdx);
+
+        MySSLUtils.sendData(asSocket, dataToSend_S2);
+
+        // ===== Receive 4 =====
+        content = MySSLUtils.receiveData(asSocket);
+        ResponsePackage rp = ResponsePackage.parse(content);
+
+        if (rp.getCode() == CommonValues.ERROR_CODE)
+            return MySSLUtils.buildErrorResponse();
 
         // Close connection to AS
         MySSLUtils.closeConnectionToServer(asSocket);
 
-        return dataReceived;
+        // ===== Send 4 =====
+        return rp.getContent();
+    }
+
+    // ===== Aux Methods =====
+    private static String getClientIPAddress(Socket cliSocket) {
+        return cliSocket.getInetAddress().getHostAddress();
     }
 
     private static SSLSocket startConnectionToASServer() {

@@ -41,21 +41,13 @@ public class AuthenticationServer {
         int curIdx = 0;
         ByteBuffer bb = ByteBuffer.wrap(content);
 
-        int ipClientLengthR1 = bb.getInt(curIdx);
-        curIdx += Integer.BYTES;
-
-        byte[] ipClientBytesR1 = new byte[ipClientLengthR1];
-        bb.get(curIdx, ipClientBytesR1);
+        byte[] ipClientBytesR1 = MySSLUtils.getNextBytes(bb, curIdx);
         ipClientR1 = new String(ipClientBytesR1, StandardCharsets.UTF_8);
-        curIdx += ipClientBytesR1.length;
+        curIdx += Integer.BYTES + ipClientBytesR1.length;
 
-        int uidLengthR1 = bb.getInt(curIdx);
-        curIdx += Integer.BYTES;
-
-        byte[] uidBytesR1 = new byte[uidLengthR1];
-        bb.get(curIdx, uidBytesR1);
+        byte[] uidBytesR1 = MySSLUtils.getNextBytes(bb, curIdx);
         uidR1 = new String(uidBytesR1, StandardCharsets.UTF_8);
-        curIdx += uidBytesR1.length;
+        curIdx += Integer.BYTES + uidBytesR1.length;
 
         // Processing
         String conditionR1 = String.format("uid = '%s'", uidR1);
@@ -96,7 +88,7 @@ public class AuthenticationServer {
         bb.putLong(curIdx, srS1);
         curIdx += Long.BYTES;
 
-        curIdx = putLengthAndBytes(bb, publicKeyBytesS1, curIdx);
+        curIdx = MySSLUtils.putLengthAndBytes(bb, publicKeyBytesS1, curIdx);
 
         MySSLUtils.sendData(mdSocket, dataToSendS1);
 
@@ -116,28 +108,16 @@ public class AuthenticationServer {
 
         curIdx = 0;
 
-        int ipClientLengthR2 = bb.getInt(curIdx);
-        curIdx += Integer.BYTES;
-
-        byte[] ipClientBytesR2 = new byte[ipClientLengthR2];
-        bb.get(curIdx, ipClientBytesR2);
+        byte[] ipClientBytesR2 = MySSLUtils.getNextBytes(bb, curIdx);
         ipClientR2 = new String(ipClientBytesR2, StandardCharsets.UTF_8);
-        curIdx += ipClientBytesR2.length;
+        curIdx += Integer.BYTES + ipClientBytesR2.length;
 
-        int publicKeyClientLengthR2 = bb.getInt(curIdx);
-        curIdx += Integer.BYTES;
-
-        byte[] publicKeyClientBytesR2 = new byte[publicKeyClientLengthR2];
-        bb.get(curIdx, publicKeyClientBytesR2);
+        byte[] publicKeyClientBytesR2 = MySSLUtils.getNextBytes(bb, curIdx);
         publicKeyClientR2 = CryptoStuff.dhRecreatePublicKeyFromBytes(publicKeyBytesS1);
-        curIdx += publicKeyClientBytesR2.length;
+        curIdx += Integer.BYTES + publicKeyClientBytesR2.length;
 
-        int cipheredSrLengthR2 = bb.getInt(curIdx);
-        curIdx += Integer.BYTES;
-
-        byte[] cipheredSrR2 = new byte[cipheredSrLengthR2];
-        bb.get(curIdx, cipheredSrR2);
-        curIdx += cipheredSrLengthR2;
+        byte[] cipheredSrR2 = MySSLUtils.getNextBytes(bb, curIdx);
+        curIdx += Integer.BYTES + cipheredSrR2.length;
 
         // Processing
         if (!ipClientR1.equals(ipClientR2))
@@ -163,6 +143,8 @@ public class AuthenticationServer {
         */
 
         // Ktoken1024
+
+        // Private key for signing
         PrivateKey privKey = CryptoStuff.parsePrivateKeyFromPemFormat("certs/asCrypto/as_priv.key");
 
         Instant tsi_S2 = Instant.now();
@@ -192,14 +174,14 @@ public class AuthenticationServer {
         ByteBuffer bb = ByteBuffer.wrap(finalSendFirstHalf);
 
         int curIdx = 0;
-        curIdx = putLengthAndBytes(bb, authId_S2, curIdx);
-        curIdx = putLengthAndBytes(bb, ktoken1024, curIdx);
-        curIdx = putLengthAndBytes(bb, tsfBytes, curIdx);
+        curIdx = MySSLUtils.putLengthAndBytes(bb, authId_S2, curIdx);
+        curIdx = MySSLUtils.putLengthAndBytes(bb, ktoken1024, curIdx);
+        curIdx = MySSLUtils.putLengthAndBytes(bb, tsfBytes, curIdx);
 
         bb.putLong(curIdx, secureRandom);
         curIdx += Long.BYTES;
 
-        curIdx = putLengthAndBytes(bb, client_ac_symKey_bytes, curIdx);
+        curIdx = MySSLUtils.putLengthAndBytes(bb, client_ac_symKey_bytes, curIdx);
 
         byte[] finalSendFirstHalfEncrypted = CryptoStuff.symEncrypt(dhKey, finalSendFirstHalf);
         byte[] finalSendFirstHalfSigned = CryptoStuff.sign(privKey, finalSendFirstHalf);
@@ -210,8 +192,8 @@ public class AuthenticationServer {
         bb = ByteBuffer.wrap(finalSend);
 
         curIdx = 0;
-        curIdx = putLengthAndBytes(bb, finalSendFirstHalfEncrypted, curIdx);
-        curIdx = putLengthAndBytes(bb, finalSendFirstHalfSigned, curIdx);
+        curIdx = MySSLUtils.putLengthAndBytes(bb, finalSendFirstHalfEncrypted, curIdx);
+        curIdx = MySSLUtils.putLengthAndBytes(bb, finalSendFirstHalfSigned, curIdx);
 
         return finalSend;
     }
@@ -232,12 +214,12 @@ public class AuthenticationServer {
 
         // Pack First Half of Ktoken1024
         curIdx = 0;
-        curIdx = putLengthAndBytes(bb, uidBytes, curIdx);
-        curIdx = putLengthAndBytes(bb, ipClientBytes, curIdx);
-        curIdx = putLengthAndBytes(bb, authId_S2, curIdx);
-        curIdx = putLengthAndBytes(bb, tsI, curIdx);
-        curIdx = putLengthAndBytes(bb, tsF, curIdx);
-        curIdx = putLengthAndBytes(bb, client_ac_symKey_bytes, curIdx);
+        curIdx = MySSLUtils.putLengthAndBytes(bb, uidBytes, curIdx);
+        curIdx = MySSLUtils.putLengthAndBytes(bb, ipClientBytes, curIdx);
+        curIdx = MySSLUtils.putLengthAndBytes(bb, authId_S2, curIdx);
+        curIdx = MySSLUtils.putLengthAndBytes(bb, tsI, curIdx);
+        curIdx = MySSLUtils.putLengthAndBytes(bb, tsF, curIdx);
+        curIdx = MySSLUtils.putLengthAndBytes(bb, client_ac_symKey_bytes, curIdx);
 
         // Second Half
         byte[] signedFirstHalfKtoken1024_S2 = CryptoStuff.sign(privKey, Ktoken1024FirstHalf_bytes);
@@ -250,24 +232,13 @@ public class AuthenticationServer {
 
         curIdx = 0;
 
-        curIdx = putLengthAndBytes(bb, Ktoken1024FirstHalf_bytes, curIdx);
-        curIdx = putLengthAndBytes(bb, signedFirstHalfKtoken1024_S2, curIdx);
+        curIdx = MySSLUtils.putLengthAndBytes(bb, Ktoken1024FirstHalf_bytes, curIdx);
+        curIdx = MySSLUtils.putLengthAndBytes(bb, signedFirstHalfKtoken1024_S2, curIdx);
 
         Key asAcSymmetricKey = CryptoStuff.parseSymKeyFromBase64(System.getProperty("SYM_KEY_AUTH_AC"));
 
         byte[] ktoken1024 = CryptoStuff.symEncrypt(asAcSymmetricKey, ktoken1024_plain);
 
         return ktoken1024;
-    }
-
-    // ===== General =====
-    private static int putLengthAndBytes(ByteBuffer bb, byte[] array, int curIdx) {
-        bb.putInt(curIdx, array.length);
-        curIdx += Integer.BYTES;
-
-        bb.put(curIdx, array);
-        curIdx += array.length;
-
-        return curIdx;
     }
 }

@@ -10,6 +10,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.security.KeyStore;
 
@@ -169,6 +170,32 @@ public abstract class MySSLUtils {
             e.printStackTrace();
         }
         return new byte[0];
+    }
+
+    public static byte[] getNextBytes(ByteBuffer bb, int curIdx) {
+        int length = bb.getInt(curIdx);
+        curIdx += Integer.BYTES;
+
+        byte[] array = new byte[length];
+        bb.get(curIdx, array);
+        curIdx += array.length;
+
+        return array;
+    }
+
+    public static int putBytes(ByteBuffer bb, byte[] array, int curIdx) {
+        bb.put(curIdx, array);
+        return curIdx + array.length;
+    }
+
+    public static int putLengthAndBytes(ByteBuffer bb, byte[] array, int curIdx) {
+        bb.putInt(curIdx, array.length);
+        curIdx += Integer.BYTES;
+
+        bb.put(curIdx, array);
+        curIdx += array.length;
+
+        return curIdx;
     }
 
     // ===== Debug Methods =====
