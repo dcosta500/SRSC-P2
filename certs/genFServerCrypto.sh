@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define entity info
-clients_array=("alice" "bob" "carol")
+clients_array=("alice" "bob" "carol" "david" "eric")
 
 # Issued Questionaire Answers
 owner_name="Tomé Filipe Vasco da Costa" # First and Last name
@@ -130,12 +130,21 @@ addMainDispatcherToServerTruststore(){
     cd ..
 }
 
-addMainDispatcherToClientTruststore(){
+addAllSeversToClientTruststore(){
+    # 1- alias, 2- folder, 3- storepass
     cd $2
 
-    # 1- alias, 2- folder, 3- storepass
     printf "${3}\n${3}\nyes\n" |\
     keytool -import -alias $md_alias -file "../../${md_foldername}/${md_cert}" -keystore truststore
+
+    printf "${3}\nyes\n" |\
+    keytool -import -alias $as_alias -file "../../${as_foldername}/${as_cert}" -keystore truststore
+
+    printf "${3}\nyes\n" |\
+    keytool -import -alias $ac_alias -file "../../${ac_foldername}/${ac_cert}" -keystore truststore
+
+    printf "${3}\nyes\n" |\
+    keytool -import -alias $ss_alias -file "../../${ss_foldername}/${ss_cert}" -keystore truststore
 
     printf "${3}\n${3}\n${3}\n" |\
     keytool -importkeystore -srckeystore truststore -srcstoretype PKCS12 -destkeystore ${1}_truststore -deststoretype JKS
@@ -190,7 +199,7 @@ addMainDispatcherToServerTruststore $ss_alias $ss_foldername $ss_storepass
 
 cd $cl_foldername
 for client_name in "${clients_array[@]}"; do
-    addMainDispatcherToClientTruststore "${client_name}_${cl_alias}" ${client_name}Crypto $cl_storepass
+    addAllSeversToClientTruststore "${client_name}_${cl_alias}" ${client_name}Crypto $cl_storepass
 done
 cd ..
 
