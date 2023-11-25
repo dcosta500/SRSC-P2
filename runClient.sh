@@ -1,3 +1,3 @@
 #!/bin/bash
 
-java -cp out client.TlsClient $1
+java -cp out client.Client $1

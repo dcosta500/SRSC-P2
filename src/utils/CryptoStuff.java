@@ -1,18 +1,23 @@
 package utils;
 
+import java.io.FileInputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.KeyStore;
 import java.security.MessageDigest;
 import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Signature;
+import java.security.cert.Certificate;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
+import java.util.Random;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyAgreement;
@@ -20,25 +25,33 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.PBEParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 public abstract class CryptoStuff {
 
     // ===== Current settings =====
-    private static final String SYMMETRIC_ENCRYPTION_CIPHERSUITE = "AES/CCM/PKCS5Padding";
+    private static final String SYMMETRIC_ENCRYPTION_CIPHERSUITE = "AES/CTR/NoPadding";
     private static final String SYMMETRIC_ALG = "AES";
     private static final String HASHING_ALG = "SHA256";
     private static final String SECRET_EXCHANGE_ALG = "DH";
-    private static final String PBE_ALG = "PBKDF2WithHmacSHA256";
+    private static final String PBE_ALG = "PBEWithMD5AndTripleDES";
     private static final String SIG_CIPHERSUITE = "SHA256withRSA";
     private static final String SIG_ALG = "RSA";
+    private static final String TRUSTSTORE_TYPE = "JKS";
 
     private static final int DH_KEY_SIZE = 512;
     private static final int SYM_KEY_SIZE = 256;
-    private static final int ITERATION_COUNT = 10; //This value in a real situation should be in ten of thousands for simplicity reasons and lower computacional times we only use 10
+
+    // This value in a real situation should be in the tens of thousands but for
+    // simplicity reasons and academic purposes we only use 10
+    private static final int ITERATION_COUNT = 10;
 
     private static final byte[] IV = { (byte) 14, (byte) 7, (byte) 212, (byte) 157, (byte) 18, (byte) 147, (byte) 221,
             (byte) 49, (byte) 152, (byte) 198, (byte) 74, (byte) 52, (byte) 130, (byte) 156, (byte) 225, (byte) 102 };
+
+    private static final byte[] SALT = { (byte) 14, (byte) 7, (byte) 212, (byte) 157, (byte) 18, (byte) 147, (byte) 221,
+            (byte) 49 };
 
     // ===== Secure Random =====
     /**
@@ -124,52 +137,22 @@ public abstract class CryptoStuff {
         return null;
     }
 
-    /**
-     * Created Key agreement object.
-     * @return The key agreement
-     */
-    public static KeyAgreement dhCreateKeyAgreement(KeyPair keyPair) {
+    public static byte[] dhGenerateSharedSecret(PrivateKey privateKey, byte[] publicKeyBytes) {
         try {
-            KeyAgreement ka = KeyAgreement.getInstance(SECRET_EXCHANGE_ALG);
-            ka.init(keyPair.getPrivate());
-            return ka;
-        } catch (Exception e) {
-            System.out.println("Could not create a key agreement for dh.");
-            e.printStackTrace();
-        }
-        return null;
-    }
+            KeyFactory keyFactory = KeyFactory.getInstance("DH");
+            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicKeyBytes);
+            PublicKey publicKey = keyFactory.generatePublic(keySpec);
 
-    /**
-     * Generates a secret
-     * @return the secret
-     */
-    public static byte[] dhGenerateSecret(KeyAgreement keyAgreement, Key publicKey) {
-        try {
+            KeyAgreement keyAgreement = KeyAgreement.getInstance("DH");
+            keyAgreement.init(privateKey);
             keyAgreement.doPhase(publicKey, true);
+
             return keyAgreement.generateSecret();
         } catch (Exception e) {
-            System.out.println("Could not generate a secret for dh.");
+            System.out.println("Could not compute shared dh secret.");
             e.printStackTrace();
         }
         return new byte[0];
-    }
-
-    /**
-     * Gets the public key
-     * @param publicKeyBytes the public key byte array
-     * @return the Public key object
-     */
-    public static Key dhRecreatePublicKeyFromBytes(byte[] publicKeyBytes) {
-        try {
-            KeyFactory keyFactory = KeyFactory.getInstance(SECRET_EXCHANGE_ALG);
-            X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(publicKeyBytes);
-            return keyFactory.generatePublic(publicKeySpec);
-        } catch (Exception e) {
-            System.out.println("Could not recreate public key from bytes.");
-            e.printStackTrace();
-        }
-        return null;
     }
 
     /**
@@ -178,20 +161,25 @@ public abstract class CryptoStuff {
      * @return the key generated from the secret
      */
     public static Key dhCreateKeyFromSharedSecret(byte[] sharedSecret) {
-        return new SecretKeySpec(sharedSecret, 0, sharedSecret.length, SYMMETRIC_ALG);
+        byte[] keyBytes = new byte[SYM_KEY_SIZE / 8];
+        new Random(Base64.getEncoder().encodeToString(sharedSecret).hashCode()).nextBytes(keyBytes);
+        return new SecretKeySpec(keyBytes, SYMMETRIC_ALG);
     }
 
     // ===== Symmetric Encryption =====
 
-    public static Key parseSymKeyFromBase64(String b64Key) {
+    public static Key parseSymKeyFromBytes(byte[] symKey) {
         try {
-            byte[] keyAsBytes = Base64.getDecoder().decode(b64Key);
-            return new SecretKeySpec(keyAsBytes, SYMMETRIC_ALG);
+            return new SecretKeySpec(symKey, SYMMETRIC_ALG);
         } catch (Exception e) {
-            System.out.println("Could not parse symmetric key from base 64.");
+            System.out.println("Could not parse symmetric key from.");
             e.printStackTrace();
         }
         return null;
+    }
+
+    public static Key parseSymKeyFromBase64(String b64Key) {
+        return parseSymKeyFromBytes(Base64.getDecoder().decode(b64Key));
     }
 
     /**
@@ -273,7 +261,8 @@ public abstract class CryptoStuff {
     public static byte[] pbeEncrypt(Key key, byte[] content) {
         try {
             Cipher cipher = Cipher.getInstance(PBE_ALG);
-            cipher.init(Cipher.ENCRYPT_MODE, key);
+            PBEParameterSpec pbeSpec = new PBEParameterSpec(SALT, ITERATION_COUNT);
+            cipher.init(Cipher.ENCRYPT_MODE, key, pbeSpec);
             return cipher.doFinal(content);
         } catch (Exception e) {
             System.out.println("Could not encrypt content (pbe).");
@@ -290,7 +279,8 @@ public abstract class CryptoStuff {
     public static byte[] pbeDecrypt(Key key, byte[] content) {
         try {
             Cipher cipher = Cipher.getInstance(PBE_ALG);
-            cipher.init(Cipher.DECRYPT_MODE, key);
+            PBEParameterSpec pbeSpec = new PBEParameterSpec(SALT, ITERATION_COUNT);
+            cipher.init(Cipher.DECRYPT_MODE, key, pbeSpec);
             return cipher.doFinal(content);
         } catch (Exception e) {
             System.out.println("Could not decrypt content (pbe).");
@@ -319,20 +309,66 @@ public abstract class CryptoStuff {
         return new byte[0];
     }
 
+    public static boolean verifySignature(PublicKey pubKey, byte[] content, byte[] sig) {
+        try {
+            Signature signature = Signature.getInstance(SIG_CIPHERSUITE);
+            signature.initVerify(pubKey);
+            signature.update(content);
+            return signature.verify(sig);
+        } catch (Exception e) {
+            System.out.println("Could not verify signature.");
+            e.printStackTrace();
+        }
+        return false;
+    }
+
     // ===== File Parsing Methods =====
+    // TODO: Document method
+    public static PublicKey getPublicKeyFromTruststore(String alias, String trstPassword) {
+        try {
+            KeyStore truststore = KeyStore.getInstance(TRUSTSTORE_TYPE);
+            String truststorePath = System.getProperty("javax.net.ssl.trustStore");
+            truststore.load(new FileInputStream(truststorePath), trstPassword.toCharArray());
+            Certificate cer = truststore.getCertificate(alias);
+            return cer.getPublicKey();
+        } catch (Exception e) {
+            System.out.println("Could not retrieve public key from truststore.");
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public static PrivateKey getPrivateKeyFromKeystore(String alias, String kstrPassword) {
+        try {
+            KeyStore keystore = KeyStore.getInstance("JKS");
+            keystore.load(new FileInputStream(System.getProperty("KEYSTORE_PATH")), kstrPassword.toCharArray());
+
+            // Get the private key and certificate chain from the keystore
+            Key key = keystore.getKey(alias, kstrPassword.toCharArray());
+            if (key instanceof PrivateKey)
+                return (PrivateKey) key;
+        } catch (Exception e) {
+            System.out.println("Could not retrieve private key from truststore.");
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     /**
      * @param path the name of the file where the private key is stored
      * @return the private key extracted from the file
      */
-    public static PrivateKey parsePrivateKeyFromPemFormat(String path) {
+    /* public static PrivateKey parsePrivateKeyFromPemFormat(String path) {
         try {
             // Read the content of the .key file
             String keyFileContent = new String(Files.readAllBytes(Paths.get(path)));
-
+    
             // Remove the first and last lines if it's in PEM format
             keyFileContent = keyFileContent.replaceAll("-----BEGIN PRIVATE KEY-----", "");
             keyFileContent = keyFileContent.replaceAll("-----END PRIVATE KEY-----", "");
-
+            keyFileContent = keyFileContent.replaceAll("\n", "");
+            keyFileContent = keyFileContent.trim();
+    
             // Decode the Base64-encoded key content
             byte[] keyBytes = Base64.getDecoder().decode(keyFileContent);
             PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(keyBytes);
@@ -343,5 +379,5 @@ public abstract class CryptoStuff {
             e.printStackTrace();
         }
         return null;
-    }
+    } */
 }

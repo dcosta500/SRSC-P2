@@ -10,7 +10,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.security.KeyStore;
 
@@ -29,6 +28,7 @@ public abstract class MySSLUtils {
             // Keystore
             ks = KeyStore.getInstance("JKS");
             ks.load(new FileInputStream(keystorePath), password.toCharArray());
+            System.setProperty("KEYSTORE_PATH", keystorePath);
 
             // Key Manager Factory
             kmf = KeyManagerFactory.getInstance("SunX509");

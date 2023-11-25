@@ -9,6 +9,7 @@ import java.security.PrivateKey;
 import java.sql.ResultSet;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Base64;
 
 import javax.crypto.KeyAgreement;
 
@@ -25,11 +26,11 @@ public class AuthenticationServer {
         * Receive-1 -> { len+IPclient || len+uid }
         * Send-1 -> { Secure Random (long) || len+Yauth }
         * Receive-2 -> { len+IPclient || len+Yclient || len+{ Secure Random }Kpwd }
-        * Send-2 -> { len+"auth" || len+Ktoken1024 || len+TSf || Secure Random (long) || len+Kclient,ac }Kdh || 
-        * { len+"auth" || len+Ktoken1024 || len+TSf || Secure Random (long) || len+Kclient,ac }SIGauth
+        * Send-2 -> { len+{ len+"auth" || len+Ktoken1024 || len+TSf || Secure Random (long) || len+Kclient,ac }Kdh || 
+        * len+{ len+"auth" || len+Ktoken1024 || len+TSf || Secure Random (long) || len+Kclient,ac }SIGauth }
         *
-        * Ktoken1024 = { { len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac } ||
-        *              { len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }SIGauth } Kac
+        * Ktoken1024 = { len+{ len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac } ||
+        *              len+{ len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }SIGauth } Kac
         */
 
         // ===== RECEIVE 1 =====
@@ -51,7 +52,7 @@ public class AuthenticationServer {
 
         // Processing
         String conditionR1 = String.format("uid = '%s'", uidR1);
-        ResultSet rs = users.select("uid, canBeAuthenticated", conditionR1);
+        ResultSet rs = users.select("uid, canBeAuthenticated, hPwd", conditionR1);
 
         String hPwd = null;
         try {
@@ -72,7 +73,6 @@ public class AuthenticationServer {
         long srS1 = CryptoStuff.getRandom();
 
         KeyPair dhKeyPairS1 = CryptoStuff.dhGenerateKeyPair();
-        KeyAgreement keyAgreementS1 = CryptoStuff.dhCreateKeyAgreement(dhKeyPairS1);
 
         Key publicKeyS1 = dhKeyPairS1.getPublic();
 
@@ -90,19 +90,14 @@ public class AuthenticationServer {
 
         curIdx = MySSLUtils.putLengthAndBytes(bb, publicKeyBytesS1, curIdx);
 
-        MySSLUtils.sendData(mdSocket, dataToSendS1);
+        MySSLUtils.sendData(mdSocket, MySSLUtils.buildResponse(CommonValues.OK_CODE, dataToSendS1));
 
         // ===== RECEIVE 2 =====
         // Receive-2 -> { len+IPclient || len+Yclient || len+{ Secure Random }Kpwd }
-
-        byte[] receiveDataR2 = MySSLUtils.receiveData(mdSocket);
-        ResponsePackage rp = ResponsePackage.parse(receiveDataR2);
-
-        byte[] contentR2 = rp.getContent();
+        byte[] contentR2 = MySSLUtils.receiveData(mdSocket);
 
         // Extract
         String ipClientR2;
-        Key publicKeyClientR2;
 
         bb = ByteBuffer.wrap(contentR2);
 
@@ -113,7 +108,6 @@ public class AuthenticationServer {
         curIdx += Integer.BYTES + ipClientBytesR2.length;
 
         byte[] publicKeyClientBytesR2 = MySSLUtils.getNextBytes(bb, curIdx);
-        publicKeyClientR2 = CryptoStuff.dhRecreatePublicKeyFromBytes(publicKeyBytesS1);
         curIdx += Integer.BYTES + publicKeyClientBytesR2.length;
 
         byte[] cipheredSrR2 = MySSLUtils.getNextBytes(bb, curIdx);
@@ -130,8 +124,15 @@ public class AuthenticationServer {
         if (srS1 != srR2)
             return MySSLUtils.buildErrorResponse();
 
-        byte[] dhSecret = CryptoStuff.dhGenerateSecret(keyAgreementS1, publicKeyClientR2);
+        byte[] dhSecret = CryptoStuff.dhGenerateSharedSecret(dhKeyPairS1.getPrivate(), publicKeyClientBytesR2);
         Key dhKey = CryptoStuff.dhCreateKeyFromSharedSecret(dhSecret);
+
+        MySSLUtils.printToLogFile("Auth",
+                "pubAuth: " + Base64.getEncoder().encodeToString(dhKeyPairS1.getPublic().getEncoded()));
+        MySSLUtils.printToLogFile("Auth", "pubClient: " + Base64.getEncoder().encodeToString(publicKeyClientBytesR2));
+        MySSLUtils.printToLogFile("Auth",
+                "dhSecret: " + Base64.getEncoder().encodeToString(dhSecret));
+        MySSLUtils.printToLogFile("Auth", "dhKey: " + Base64.getEncoder().encodeToString(dhKey.getEncoded()));
 
         // ===== SEND 2 =====
         /**
@@ -145,7 +146,10 @@ public class AuthenticationServer {
         // Ktoken1024
 
         // Private key for signing
-        PrivateKey privKey = CryptoStuff.parsePrivateKeyFromPemFormat("certs/asCrypto/as_priv.key");
+        //PrivateKey privKey = CryptoStuff.parsePrivateKeyFromPemFormat("certs/asCrypto/as_priv.key");
+        PrivateKey privKey = CryptoStuff.getPrivateKeyFromKeystore("as", "as123456");
+        if (privKey == null)
+            return MySSLUtils.buildErrorResponse();
 
         Instant tsi_S2 = Instant.now();
         Instant tsf_S2 = tsi_S2.plus(Duration.ofHours(CommonValues.TOKEN_VALIDITY_HOURS));
@@ -158,7 +162,10 @@ public class AuthenticationServer {
         byte[] ktoken1024 = createKToken1024(uidBytesR1, ipClientBytesR1, tsi_bytes_S2, tsf_bytes_S2,
                 clientACSymKey_bytes_S2, privKey);
 
-        return createLoginFinalSend(ktoken1024, tsf_bytes_S2, clientACSymKey_bytes_S2, srS1, dhKey, privKey);
+        byte[] finalSend = createLoginFinalSend(ktoken1024, tsf_bytes_S2, clientACSymKey_bytes_S2, srS1, dhKey,
+                privKey);
+
+        return MySSLUtils.buildResponse(CommonValues.OK_CODE, finalSend);
     }
 
     // ===== Aux Methods =====
@@ -194,6 +201,9 @@ public class AuthenticationServer {
         curIdx = 0;
         curIdx = MySSLUtils.putLengthAndBytes(bb, finalSendFirstHalfEncrypted, curIdx);
         curIdx = MySSLUtils.putLengthAndBytes(bb, finalSendFirstHalfSigned, curIdx);
+
+        MySSLUtils.printToLogFile("Auth", String.format("ktoken: %d bytes, encrypted: %d bytes, signed: %d bytes",
+                ktoken1024.length, finalSendFirstHalfEncrypted.length, finalSendFirstHalfSigned.length));
 
         return finalSend;
     }

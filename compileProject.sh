@@ -6,8 +6,9 @@ genNewCerts(){
     cd ..
 }
 
-javac -d out ./src/utils/*
-javac -d out ./src/utils/* ./src/client/*
+rm log.txt # deletes debug log file
+
+javac -d out ./src/utils/* ./src/client/responseModels/* ./src/client/Client.java ./src/client/ClientCommands.java
 javac -d out ./src/utils/* ./src/servers/MainDispatcher/*
 javac -d out ./src/utils/* ./src/servers/AuthenticationServer/*
 

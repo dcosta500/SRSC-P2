@@ -98,57 +98,53 @@ public class MainDispatcher {
         */
         SSLSocket asSocket = startConnectionToASServer();
 
-        // ===== Receive 1 =====
+        // ===== Receive 1 from client =====
         // ...
 
-        // ===== Send 1 =====
-        byte[] ipClientBytes_S1 = getClientIPAddress(clientSocket).getBytes();
+        // ===== Send 1 to as =====
+        byte[] dataToSend_S1 = addClientIPToBeggining(clientSocket, content);
 
-        byte[] dataToSend_S1 = new byte[Integer.BYTES + ipClientBytes_S1.length + content.length];
-        ByteBuffer bb = ByteBuffer.wrap(dataToSend_S1);
+        MySSLUtils.sendData(asSocket, MySSLUtils.buildPackage(Command.LOGIN, dataToSend_S1));
 
-        int curIdx = 0;
-
-        curIdx = MySSLUtils.putLengthAndBytes(bb, ipClientBytes_S1, curIdx);
-        curIdx = MySSLUtils.putBytes(bb, content, curIdx);
-
-        MySSLUtils.sendData(asSocket, dataToSend_S1);
-
-        // ===== Receive 2 =====
+        // ===== Receive 2 from as =====
         content = MySSLUtils.receiveData(asSocket);
 
-        // ===== Send 2 =====
+        // ===== Send 2 to client =====
         MySSLUtils.sendData(clientSocket, content);
 
-        // ===== Receive 3 =====
+        // ===== Receive 3 from client =====
         content = MySSLUtils.receiveData(clientSocket);
 
-        // ===== Send 3 =====
-        byte[] dataToSend_S2 = new byte[Integer.BYTES + ipClientBytes_S1.length + content.length];
-        bb = ByteBuffer.wrap(dataToSend_S2);
+        // ===== Send 3 to as =====
+        byte[] dataToSend_S3 = addClientIPToBeggining(clientSocket, content);
 
-        curIdx = 0;
+        MySSLUtils.sendData(asSocket, dataToSend_S3);
 
-        curIdx = MySSLUtils.putLengthAndBytes(bb, ipClientBytes_S1, curIdx);
-        curIdx = MySSLUtils.putBytes(bb, content, curIdx);
-
-        MySSLUtils.sendData(asSocket, dataToSend_S2);
-
-        // ===== Receive 4 =====
+        // ===== Receive 4 from as =====
         content = MySSLUtils.receiveData(asSocket);
-        ResponsePackage rp = ResponsePackage.parse(content);
-
-        if (rp.getCode() == CommonValues.ERROR_CODE)
-            return MySSLUtils.buildErrorResponse();
 
         // Close connection to AS
         MySSLUtils.closeConnectionToServer(asSocket);
 
-        // ===== Send 4 =====
-        return rp.getContent();
+        // ===== Send 4 to client =====
+        return content;
     }
 
     // ===== Aux Methods =====
+    private static byte[] addClientIPToBeggining(Socket clientSocket, byte[] content) {
+        byte[] ipClientBytes = getClientIPAddress(clientSocket).getBytes();
+
+        byte[] data = new byte[Integer.BYTES + ipClientBytes.length + content.length];
+        ByteBuffer bb = ByteBuffer.wrap(data);
+
+        int curIdx = 0;
+
+        curIdx = MySSLUtils.putLengthAndBytes(bb, ipClientBytes, curIdx);
+        curIdx = MySSLUtils.putBytes(bb, content, curIdx);
+
+        return data;
+    }
+
     private static String getClientIPAddress(Socket cliSocket) {
         return cliSocket.getInetAddress().getHostAddress();
     }

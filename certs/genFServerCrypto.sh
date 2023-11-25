@@ -60,7 +60,7 @@ genSelfSignedKeysAndCerts(){
 
     # Generate a self-signed keystore
     printf "$owner_name\n$owner_org_unit\n$owner_org\n$owner_city\n$owner_district\n$owner_country_code\nyes\n" |\
-    keytool -genkeypair -noprompt -keyalg RSA -alias $1 -keystore "selfsigned" -storepass $4 -validity 360 -keysize 4096
+    keytool -genkeypair -noprompt -keyalg RSA -alias $1 -keystore "selfsigned" -storepass $4 -validity 360 -keysize 2048
 
     # Convert keystore from PKCS12
     printf "${4}\n${4}\n${4}\n" |\
@@ -170,7 +170,7 @@ genSelfSignedKeysAndCerts $ss_alias $ss_keystore $ss_cert $ss_storepass $ss_fold
 echo
 echo
 echo "Servers' Info Generated..."
-sleep 1
+#sleep 1
 
 # Gen for clients too
 cd $cl_foldername
@@ -188,7 +188,7 @@ cd ..
 echo
 echo
 echo "Clients' Info Generated..."
-sleep 3
+#sleep 3
 
 # Add to truststores
 addAllToMainDispatcherTrustore
