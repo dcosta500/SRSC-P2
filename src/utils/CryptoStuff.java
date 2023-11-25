@@ -284,7 +284,7 @@ public abstract class CryptoStuff {
             return cipher.doFinal(content);
         } catch (Exception e) {
             System.out.println("Could not decrypt content (pbe).");
-            e.printStackTrace();
+            //e.printStackTrace();
         }
         return new byte[0];
     }

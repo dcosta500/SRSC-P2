@@ -121,6 +121,11 @@ public class AuthenticationServer {
         Key pbeKey = CryptoStuff.pbeCreateKeyFromPassword(hPwd);
 
         byte[] receivedSrR2 = CryptoStuff.pbeDecrypt(pbeKey, cipheredSrR2);
+        if (receivedSrR2.length == 0) {
+            // Password is probably wrong
+            return MySSLUtils.buildErrorResponse();
+        }
+
         long srR2 = ByteBuffer.wrap(receivedSrR2).getLong(0);
 
         if (srS1 != srR2)
@@ -187,15 +192,6 @@ public class AuthenticationServer {
 
         byte[] finalSendFirstHalfEncrypted = CryptoStuff.symEncrypt(dhKey, finalSendFirstHalf);
         byte[] finalSendFirstHalfSigned = CryptoStuff.sign(privKey, finalSendFirstHalf);
-
-        MySSLUtils.printToLogFile("Auth",
-                "dhKey: " + Base64.getEncoder().encodeToString(dhKey.getEncoded()));
-        MySSLUtils.printToLogFile("Auth",
-                "finalSendFirstHalf: " + Base64.getEncoder().encodeToString(finalSendFirstHalf));
-        MySSLUtils.printToLogFile("Auth",
-                "encrypted: " + Base64.getEncoder().encodeToString(finalSendFirstHalfEncrypted));
-        MySSLUtils.printToLogFile("Auth",
-                "signed: " + Base64.getEncoder().encodeToString(finalSendFirstHalfSigned));
 
         int finalSendLength = 2 * Integer.BYTES + finalSendFirstHalfEncrypted.length + finalSendFirstHalfSigned.length;
 

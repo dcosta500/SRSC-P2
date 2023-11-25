@@ -139,3 +139,6 @@ certs/clients/carolCrypto/carol_cl_truststore
 certs/clients/carolCrypto/carol_cl.cer
 certs/clients/carolCrypto/carol_cl.pem
 certs/clients/carolCrypto/keystore_carol_cl.jks
+db/auth.db
+.gitignore
+src/client/Client.java

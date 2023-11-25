@@ -86,7 +86,7 @@ public abstract class ClientCommands {
         System.out.println("Result: " + result);
     }
 
-    public static LoginResponseModel login(SSLSocket socket, String uid) {
+    public static LoginResponseModel login(SSLSocket socket, String cmd) {
         /**
         * Data flow:
         * Send-1 -> { len+uid }
@@ -98,6 +98,10 @@ public abstract class ClientCommands {
 
         // ===== Send 1 =====
         // Send-1 -> { len+uid }
+        String[] cmdArgs = cmd.split(" ");
+        String uid = cmdArgs[1];
+        String pwd = cmdArgs[2];
+
         byte[] uidBytes = uid.getBytes();
 
         byte[] dataToSend1 = new byte[Integer.BYTES + uidBytes.length];
@@ -141,7 +145,7 @@ public abstract class ClientCommands {
 
         byte[] pubKeyClientBytes_R1 = kp.getPublic().getEncoded();
 
-        String hash = CryptoStuff.hashB64(uid + "123456");
+        String hash = CryptoStuff.hashB64(pwd);
         Key pbeKey_R1 = CryptoStuff.pbeCreateKeyFromPassword(hash);
         byte[] srEncryptedBytes_R1 = CryptoStuff.pbeEncrypt(pbeKey_R1, srBytes_r1);
 
@@ -181,15 +185,6 @@ public abstract class ClientCommands {
         curIdx += Integer.BYTES + signedBytes_R2.length;
 
         PublicKey asPublicKey = CryptoStuff.getPublicKeyFromTruststore("as", "cl123456");
-
-        MySSLUtils.printToLogFile("Client",
-                "dhKey: " + Base64.getEncoder().encodeToString(dhKey.getEncoded()));
-        MySSLUtils.printToLogFile("Client",
-                "finalSendFirstHalf: " + Base64.getEncoder().encodeToString(bytes_R2));
-        MySSLUtils.printToLogFile("Client",
-                "encrypted: " + Base64.getEncoder().encodeToString(encryptedBytes_R2));
-        MySSLUtils.printToLogFile("Client",
-                "signed: " + Base64.getEncoder().encodeToString(signedBytes_R2));
 
         if (!CryptoStuff.verifySignature(asPublicKey, bytes_R2, signedBytes_R2)) {
             System.out.println("Failed signature verification.");
@@ -249,22 +244,4 @@ public abstract class ClientCommands {
     }
 
     // ===== AUX METHODS =====
-    public static boolean areKeysMatching(PublicKey publicKey, PrivateKey privateKey) {
-        try {
-            // Sign some data with the private key
-            Signature signature = Signature.getInstance("SHA256withRSA");
-            signature.initSign(privateKey);
-            signature.update("test".getBytes());
-            byte[] signatureBytes = signature.sign();
-
-            // Verify the signature with the public key
-            signature.initVerify(publicKey);
-            signature.update("test".getBytes());
-
-            return signature.verify(signatureBytes);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
 }

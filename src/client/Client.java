@@ -41,7 +41,7 @@ public class Client {
                     CommonValues.MD_PORT_NUMBER);
             System.out.print("Command -> ");
             String cmd = in.nextLine();
-            switch (Command.valueOf(cmd.toUpperCase())) {
+            switch (Command.valueOf(cmd.split(" ")[0].toUpperCase())) {
                 case SUM:
                     ClientCommands.sum(socket);
                     break;
@@ -49,7 +49,7 @@ public class Client {
                     ClientCommands.mult(socket);
                     break;
                 case LOGIN:
-                    LoginResponseModel lrm = ClientCommands.login(socket, uid);
+                    LoginResponseModel lrm = ClientCommands.login(socket, cmd);
                     processLoginResponse(lrm);
                     break;
                 case STATS:
@@ -64,12 +64,11 @@ public class Client {
 
     private static void processLoginResponse(LoginResponseModel lrm) {
         if (lrm == null) {
-            System.out.println("Lrm is null");
             return;
         }
 
         auth_ktoken1024 = lrm.ktoken1024;
-        System.out.println("Timestamp: " + lrm.timestampFinal.toString());
+        System.out.println("Login successfuly done at: " + lrm.timestampFinal.toString());
         client_auth_key = lrm.clientAc_SymKey;
     }
 
