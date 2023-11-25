@@ -1,10 +1,14 @@
 package client;
 
+import java.io.FileInputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.security.KeyPair;
+import java.security.KeyStore;
+import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.Signature;
 import java.util.Base64;
 
 import javax.crypto.KeyAgreement;
@@ -137,7 +141,8 @@ public abstract class ClientCommands {
 
         byte[] pubKeyClientBytes_R1 = kp.getPublic().getEncoded();
 
-        Key pbeKey_R1 = CryptoStuff.pbeCreateKeyFromPassword(CryptoStuff.hashB64(uid + "123456"));
+        String hash = CryptoStuff.hashB64(uid + "123456");
+        Key pbeKey_R1 = CryptoStuff.pbeCreateKeyFromPassword(hash);
         byte[] srEncryptedBytes_R1 = CryptoStuff.pbeEncrypt(pbeKey_R1, srBytes_r1);
 
         // ===== Send 2 =====
@@ -170,20 +175,22 @@ public abstract class ClientCommands {
         byte[] encryptedBytes_R2 = MySSLUtils.getNextBytes(bb, curIdx);
         curIdx += Integer.BYTES + encryptedBytes_R2.length;
 
-        byte[] bytes_R2 = CryptoStuff.symDecrypt(dhKey, content);
+        byte[] bytes_R2 = CryptoStuff.symDecrypt(dhKey, encryptedBytes_R2);
 
         byte[] signedBytes_R2 = MySSLUtils.getNextBytes(bb, curIdx);
         curIdx += Integer.BYTES + signedBytes_R2.length;
 
-        MySSLUtils.printToLogFile("Client",
-                "pubAuth: " + Base64.getEncoder().encodeToString(serverPublicKeyDHBytesR1));
-        MySSLUtils.printToLogFile("Client",
-                "pubClient: " + Base64.getEncoder().encodeToString(kp.getPublic().getEncoded()));
-        MySSLUtils.printToLogFile("Client",
-                "dhSecret: " + Base64.getEncoder().encodeToString(dhSecret));
-        MySSLUtils.printToLogFile("Client", "dhKey: " + Base64.getEncoder().encodeToString(dhKey.getEncoded()));
-
         PublicKey asPublicKey = CryptoStuff.getPublicKeyFromTruststore("as", "cl123456");
+
+        MySSLUtils.printToLogFile("Client",
+                "dhKey: " + Base64.getEncoder().encodeToString(dhKey.getEncoded()));
+        MySSLUtils.printToLogFile("Client",
+                "finalSendFirstHalf: " + Base64.getEncoder().encodeToString(bytes_R2));
+        MySSLUtils.printToLogFile("Client",
+                "encrypted: " + Base64.getEncoder().encodeToString(encryptedBytes_R2));
+        MySSLUtils.printToLogFile("Client",
+                "signed: " + Base64.getEncoder().encodeToString(signedBytes_R2));
+
         if (!CryptoStuff.verifySignature(asPublicKey, bytes_R2, signedBytes_R2)) {
             System.out.println("Failed signature verification.");
             return null;
@@ -242,4 +249,22 @@ public abstract class ClientCommands {
     }
 
     // ===== AUX METHODS =====
+    public static boolean areKeysMatching(PublicKey publicKey, PrivateKey privateKey) {
+        try {
+            // Sign some data with the private key
+            Signature signature = Signature.getInstance("SHA256withRSA");
+            signature.initSign(privateKey);
+            signature.update("test".getBytes());
+            byte[] signatureBytes = signature.sign();
+
+            // Verify the signature with the public key
+            signature.initVerify(publicKey);
+            signature.update("test".getBytes());
+
+            return signature.verify(signatureBytes);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }

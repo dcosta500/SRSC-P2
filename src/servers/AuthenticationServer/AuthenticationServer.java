@@ -9,6 +9,7 @@ import java.security.PrivateKey;
 import java.sql.ResultSet;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Base64;
 
 import javax.crypto.KeyAgreement;
@@ -118,6 +119,7 @@ public class AuthenticationServer {
             return MySSLUtils.buildErrorResponse();
 
         Key pbeKey = CryptoStuff.pbeCreateKeyFromPassword(hPwd);
+
         byte[] receivedSrR2 = CryptoStuff.pbeDecrypt(pbeKey, cipheredSrR2);
         long srR2 = ByteBuffer.wrap(receivedSrR2).getLong(0);
 
@@ -126,13 +128,6 @@ public class AuthenticationServer {
 
         byte[] dhSecret = CryptoStuff.dhGenerateSharedSecret(dhKeyPairS1.getPrivate(), publicKeyClientBytesR2);
         Key dhKey = CryptoStuff.dhCreateKeyFromSharedSecret(dhSecret);
-
-        MySSLUtils.printToLogFile("Auth",
-                "pubAuth: " + Base64.getEncoder().encodeToString(dhKeyPairS1.getPublic().getEncoded()));
-        MySSLUtils.printToLogFile("Auth", "pubClient: " + Base64.getEncoder().encodeToString(publicKeyClientBytesR2));
-        MySSLUtils.printToLogFile("Auth",
-                "dhSecret: " + Base64.getEncoder().encodeToString(dhSecret));
-        MySSLUtils.printToLogFile("Auth", "dhKey: " + Base64.getEncoder().encodeToString(dhKey.getEncoded()));
 
         // ===== SEND 2 =====
         /**
@@ -193,6 +188,15 @@ public class AuthenticationServer {
         byte[] finalSendFirstHalfEncrypted = CryptoStuff.symEncrypt(dhKey, finalSendFirstHalf);
         byte[] finalSendFirstHalfSigned = CryptoStuff.sign(privKey, finalSendFirstHalf);
 
+        MySSLUtils.printToLogFile("Auth",
+                "dhKey: " + Base64.getEncoder().encodeToString(dhKey.getEncoded()));
+        MySSLUtils.printToLogFile("Auth",
+                "finalSendFirstHalf: " + Base64.getEncoder().encodeToString(finalSendFirstHalf));
+        MySSLUtils.printToLogFile("Auth",
+                "encrypted: " + Base64.getEncoder().encodeToString(finalSendFirstHalfEncrypted));
+        MySSLUtils.printToLogFile("Auth",
+                "signed: " + Base64.getEncoder().encodeToString(finalSendFirstHalfSigned));
+
         int finalSendLength = 2 * Integer.BYTES + finalSendFirstHalfEncrypted.length + finalSendFirstHalfSigned.length;
 
         byte[] finalSend = new byte[finalSendLength];
@@ -201,9 +205,6 @@ public class AuthenticationServer {
         curIdx = 0;
         curIdx = MySSLUtils.putLengthAndBytes(bb, finalSendFirstHalfEncrypted, curIdx);
         curIdx = MySSLUtils.putLengthAndBytes(bb, finalSendFirstHalfSigned, curIdx);
-
-        MySSLUtils.printToLogFile("Auth", String.format("ktoken: %d bytes, encrypted: %d bytes, signed: %d bytes",
-                ktoken1024.length, finalSendFirstHalfEncrypted.length, finalSendFirstHalfSigned.length));
 
         return finalSend;
     }
