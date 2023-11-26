@@ -5,6 +5,7 @@ import servers.AuthenticationServer.DataPackage;
 import utils.CommonValues;
 import utils.CryptoStuff;
 import utils.MySSLUtils;
+import utils.SQL;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -26,7 +27,7 @@ public class ACServer {
     private static final Set<Long> nonceSet = new HashSet<>();
 
 
-    private static AccessControlSQL users;
+    private static SQL users;
 
     private static byte[] executeCommand(Socket socket, DataPackage dp) {
         switch (dp.getCommand()) {
@@ -80,7 +81,7 @@ public class ACServer {
         try {
             Class.forName("org.sqlite.JDBC");
 
-            users = new AccessControlSQL();
+            users = new AccessControlSQL("users","perms.db");
             users.insert("alice",CommonValues.SS_ID,CommonValues.PERM_READ_WRITE);
             users.insert("bob",CommonValues.SS_ID,CommonValues.PERM_READ);
             users.insert("carol",CommonValues.SS_ID,CommonValues.PERM_DENY);

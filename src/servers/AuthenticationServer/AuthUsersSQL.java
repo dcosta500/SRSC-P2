@@ -4,17 +4,16 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 
 import utils.MySQLiteUtils;
+import utils.SQL;
 
-public class AuthUsersSQL {
+public class AuthUsersSQL extends SQL {
 
-    private static final String TABLE_NAME = "users";
-    private static final String DB_FILE_NAME = "auth.db";
 
-    private Connection con;
-
-    public AuthUsersSQL() {
+    public AuthUsersSQL(String tableName, String dbFile) {
+        super(tableName,dbFile);
         init();
     }
+
 
     private void init() {
         con = MySQLiteUtils.resetFile(DB_FILE_NAME);
@@ -22,30 +21,21 @@ public class AuthUsersSQL {
                 "uid TEXT PRIMARY KEY, email TEXT, hPwd TEXT, canBeAuthenticated BOOLEAN");
     }
 
-    public ResultSet select(String columns, String condition) {
-        return MySQLiteUtils.select(con, TABLE_NAME, columns, condition);
-    }
-
-    public void insert(String uid, String email, String hPwd, boolean canBeAuthenticated) {
-        String values = createValuesString(uid, email, hPwd, canBeAuthenticated);
+    @Override
+    public void insert(Object... args) {
+        String values = createValuesString(args[0],args[1], args[2], args[3]);
         MySQLiteUtils.insert(con, TABLE_NAME, "uid, email, hPwd, canBeAuthenticated", values);
     }
 
-    public void update(String uid, String email, String hPwd, boolean canBeAuthenticated, String condition) {
-        String values = createValuesString(uid, email, hPwd, canBeAuthenticated);
+    @Override
+    public void update(String condition,Object... args) {
+        String values = createValuesString(args[0],args[1], args[2], args[3]);
         MySQLiteUtils.update(con, TABLE_NAME, values, condition);
     }
 
-    public void delete(String condition) {
-        MySQLiteUtils.delete(con, TABLE_NAME, condition);
-    }
-
-    public void deleteAll() {
-        MySQLiteUtils.deleteAll(con, TABLE_NAME);
-    }
-
-    private String createValuesString(String uid, String email, String hPwd, boolean canBeAuthenticated) {
-        return String.format("'%s', '%s', '%s', %d", uid, email, hPwd, canBeAuthenticated ? 1 : 0);
+    @Override
+    protected String createValuesString(Object... params) {
+        return String.format("'%s', '%s', '%s', %d", params[0], params[1], params[2], (boolean)params[3] ? 1 : 0);
     }
 
 }

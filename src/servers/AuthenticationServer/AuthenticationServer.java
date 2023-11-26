@@ -13,10 +13,11 @@ import java.time.Instant;
 import utils.CommonValues;
 import utils.CryptoStuff;
 import utils.MySSLUtils;
+import utils.SQL;
 
 public class AuthenticationServer {
 
-    public static byte[] login(Socket mdSocket, AuthUsersSQL users, byte[] content) {
+    public static byte[] login(Socket mdSocket, SQL users, byte[] content) {
         /* 
         * Data flow:
         * Receive-1 -> { len+IPclient || len+uid }

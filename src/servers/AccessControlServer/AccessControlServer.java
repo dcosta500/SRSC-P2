@@ -3,6 +3,8 @@ package servers.AccessControlServer;
 import utils.CommonValues;
 import utils.CryptoStuff;
 import utils.MySSLUtils;
+import utils.SQL;
+
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -17,7 +19,7 @@ import java.util.Set;
 public class AccessControlServer {
 
     private static String idClient_token;
-    public static byte[] access(Socket mdSocket, Set<Long> nonceSet, byte[] content, AccessControlSQL users) {
+    public static byte[] access(Socket mdSocket, Set<Long> nonceSet, byte[] content, SQL users) {
         /*
          * Data flow:
          * Receive-1-> { len+ipClient || len+IdServiço || len+Ktoken1024 || len+AuthClient}
@@ -191,7 +193,7 @@ public class AccessControlServer {
     }
 
     private static byte[] buildTokenV(byte[] idClientB,byte[] ipClientBytes,byte[] idBytesService,
-                                      byte[] ipClientB_auth,byte[] clientSSSymKey_bytes,Instant tsi,Instant tsf,AccessControlSQL users){
+                                      byte[] ipClientB_auth,byte[] clientSSSymKey_bytes,Instant tsi,Instant tsf,SQL users){
         ByteBuffer bb;
         int curIdx=0;
         byte[] kvTokenDecrypted = new byte[Integer.BYTES + clientSSSymKey_bytes.length + Integer.BYTES + Integer.BYTES

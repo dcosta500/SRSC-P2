@@ -16,7 +16,7 @@ public class ASServer {
     private static final String PASSWORD = "as123456";
     private static final boolean DO_CLIENT_AUTH = true;
 
-    private static AuthUsersSQL users;
+    private static SQL users;
 
     private static byte[] executeCommand(Socket socket, DataPackage dp) {
         switch (dp.getCommand()) {
@@ -50,7 +50,7 @@ public class ASServer {
         try {
             Class.forName("org.sqlite.JDBC");
 
-            users = new AuthUsersSQL();
+            users = new AuthUsersSQL("users","auth.db");
 
             for (String uname : usernames) {
                 String hPwd = CryptoStuff.hashB64(uname + "123456");
