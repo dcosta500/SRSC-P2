@@ -153,3 +153,9 @@ certs/clients/carolCrypto/carol_cl.cer
 certs/clients/carolCrypto/carol_cl.pem
 certs/clients/carolCrypto/keystore_carol_cl.jks
 /certs/clients/bobCrypto/
+/SRSC.iml
+/.idea/libraries/jar.xml
+/.idea/git_toolbox_prj.xml
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/vcs.xml
