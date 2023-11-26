@@ -142,3 +142,13 @@ certs/clients/carolCrypto/keystore_carol_cl.jks
 db/auth.db
 .gitignore
 src/client/Client.java
+certs/clients/bobCrypto/bob_cl_priv.key
+certs/clients/bobCrypto/bob_cl_truststore
+certs/clients/bobCrypto/bob_cl.cer
+certs/clients/bobCrypto/bob_cl.pem
+certs/clients/bobCrypto/keystore_bob_cl.jks
+certs/clients/carolCrypto/carol_cl_priv.key
+certs/clients/carolCrypto/carol_cl_truststore
+certs/clients/carolCrypto/carol_cl.cer
+certs/clients/carolCrypto/carol_cl.pem
+certs/clients/carolCrypto/keystore_carol_cl.jks

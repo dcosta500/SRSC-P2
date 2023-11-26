@@ -88,6 +88,63 @@ genSelfSignedKeysAndCerts(){
     cd ..
 }
 
+addAllServersToAllOtherServersTruststores(){
+    #as
+    cd $as_foldername
+
+    printf "${as_storepass}\n${as_storepass}\nyes\n" |\
+    keytool -import -alias $md_alias -file "../${md_foldername}/${md_cert}" -keystore truststore # MD
+
+    printf "${as_storepass}\nyes\n" |\
+    keytool -import -alias $ac_alias -file "../${ac_foldername}/${ac_cert}" -keystore truststore # AC
+
+    printf "${as_storepass}\nyes\n" |\
+    keytool -import -alias $ss_alias -file "../${ss_foldername}/${ss_cert}" -keystore truststore # SS
+
+    printf "${as_storepass}\n${as_storepass}\n${as_storepass}\n" |\
+    keytool -importkeystore -srckeystore truststore -srcstoretype PKCS12 -destkeystore ${as_alias}_truststore -deststoretype JKS
+
+    rm truststore
+
+    cd ..
+    #ac
+    cd $ac_foldername
+
+    printf "${ac_storepass}\n${ac_storepass}\nyes\n" |\
+    keytool -import -alias $md_alias -file "../${md_foldername}/${md_cert}" -keystore truststore # MD
+
+    printf "${ac_storepass}\nyes\n" |\
+    keytool -import -alias $as_alias -file "../${as_foldername}/${as_cert}" -keystore truststore # AS
+
+    printf "${ac_storepass}\nyes\n" |\
+    keytool -import -alias $ss_alias -file "../${ss_foldername}/${ss_cert}" -keystore truststore # SS
+
+    printf "${ac_storepass}\n${ac_storepass}\n${ac_storepass}\n" |\
+    keytool -importkeystore -srckeystore truststore -srcstoretype PKCS12 -destkeystore ${ac_alias}_truststore -deststoretype JKS
+
+    rm truststore
+
+    cd ..
+    #ss
+    cd $ss_foldername
+
+    printf "${ss_storepass}\n${ss_storepass}\nyes\n" |\
+    keytool -import -alias $md_alias -file "../${md_foldername}/${md_cert}" -keystore truststore # MD
+
+    printf "${ss_storepass}\nyes\n" |\
+    keytool -import -alias $as_alias -file "../${as_foldername}/${as_cert}" -keystore truststore # AS
+
+    printf "${ss_storepass}\nyes\n" |\
+    keytool -import -alias $ac_alias -file "../${ac_foldername}/${ac_cert}" -keystore truststore # AC
+
+    printf "${ss_storepass}\n${ss_storepass}\n${ss_storepass}\n" |\
+    keytool -importkeystore -srckeystore truststore -srcstoretype PKCS12 -destkeystore ${ss_alias}_truststore -deststoretype JKS
+
+    rm truststore
+
+    cd ..
+}
+
 addAllToMainDispatcherTrustore(){
     cd $md_foldername
 
@@ -109,21 +166,6 @@ addAllToMainDispatcherTrustore(){
 
     printf "${md_storepass}\n${md_storepass}\n${md_storepass}\n" |\
     keytool -importkeystore -srckeystore truststore -srcstoretype PKCS12 -destkeystore ${md_alias}_truststore -deststoretype JKS
-
-    rm truststore
-
-    cd ..
-}
-
-addMainDispatcherToServerTruststore(){
-    cd $2
-
-    # 1- alias, 2- folder, 3- storepass
-    printf "${3}\n${3}\nyes\n" |\
-    keytool -import -alias $md_alias -file "../${md_foldername}/${md_cert}" -keystore truststore
-
-    printf "${3}\n${3}\n${3}\n" |\
-    keytool -importkeystore -srckeystore truststore -srcstoretype PKCS12 -destkeystore ${1}_truststore -deststoretype JKS
 
     rm truststore
 
@@ -193,9 +235,7 @@ echo "Clients' Info Generated..."
 # Add to truststores
 addAllToMainDispatcherTrustore
 
-addMainDispatcherToServerTruststore $as_alias $as_foldername $as_storepass
-addMainDispatcherToServerTruststore $ac_alias $ac_foldername $ac_storepass
-addMainDispatcherToServerTruststore $ss_alias $ss_foldername $ss_storepass
+addAllServersToAllOtherServersTruststores
 
 cd $cl_foldername
 for client_name in "${clients_array[@]}"; do
