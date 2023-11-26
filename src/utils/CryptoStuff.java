@@ -201,7 +201,7 @@ public abstract class CryptoStuff {
     /**
      * Encripts content with a simetric key
      * @param key the simetric key
-     * @param the content to be encripted
+     * @param content the content to be encripted
      * @return the encrypted content
      */
     public static byte[] symEncrypt(Key key, byte[] content) {
@@ -219,7 +219,7 @@ public abstract class CryptoStuff {
     /**
      * decripts content with a simetric key
      * @param key the simetric key
-     * @param the content to be decripted
+     * @param content the content to be decripted
      * @return the decrypted content
      */
     public static byte[] symDecrypt(Key key, byte[] content) {
@@ -237,7 +237,7 @@ public abstract class CryptoStuff {
     // ===== Password Based Encryption =====
 
     /**
-     * @param the password
+     * @param password the password
      * @return the key generated from password
      */
     public static Key pbeCreateKeyFromPassword(String password) {

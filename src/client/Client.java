@@ -18,7 +18,7 @@ public class Client {
     private static final String PASSWORD = "cl123456";
 
     private static byte[] auth_ktoken1024;
-    private static Key client_auth_key;
+    private static Key client_ac_key;
 
     private static void readCommands() {
         /*
@@ -55,6 +55,8 @@ public class Client {
                 case STATS:
                     ClientCommands.stats(socket);
                     break;
+                case ACCESS:
+                    ClientCommands.access(socket,auth_ktoken1024,client_ac_key,uid,cmd);
                 default:
             }
             MySSLUtils.closeConnectionToServer(socket);
@@ -69,7 +71,8 @@ public class Client {
 
         auth_ktoken1024 = lrm.ktoken1024;
         System.out.println("Login successfuly done at: " + lrm.timestampFinal.toString());
-        client_auth_key = lrm.clientAc_SymKey;
+        client_ac_key = lrm.clientAc_SymKey;
+
     }
 
     public static void main(String[] args) throws Exception {

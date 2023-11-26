@@ -209,7 +209,7 @@ public class AuthenticationServer {
             byte[] client_ac_symKey_bytes, PrivateKey privKey) {
         int curIdx = 0;
         ByteBuffer bb;
-        byte[] authId_S2 = CommonValues.AUTH_ID.getBytes();
+        byte[] authId_S2 = CommonValues.AC_ID.getBytes();
 
         // First half
         int lengthKtoken1024FirstHalf = 6 * Integer.BYTES + uidBytes.length + ipClientBytes.length

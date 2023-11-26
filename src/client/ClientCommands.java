@@ -1,6 +1,7 @@
 package client;
 
 import java.io.FileInputStream;
+import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
@@ -9,11 +10,13 @@ import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Signature;
+import java.time.Instant;
 import java.util.Base64;
 
 import javax.crypto.KeyAgreement;
 import javax.net.ssl.SSLSocket;
 
+import client.responseModels.AccessResponseModel;
 import client.responseModels.LoginResponseModel;
 import utils.Command;
 import utils.CommonValues;
@@ -241,6 +244,76 @@ public abstract class ClientCommands {
         bb.get(Integer.BYTES, ipAddBytes);
 
         System.out.println("Ip: " + new String(ipAddBytes, StandardCharsets.UTF_8));
+    }
+
+
+    public static AccessResponseModel access(SSLSocket socketk,byte[] auth_ktoken1024,Key client_auth_key,String uid,String serviceID){
+        try{
+            /*
+             * Data flow:
+             * Send-1-> { len+IdServiço || len+token1024 || len+AuthClient}
+             * AuthClient = {len+IdClient || len+ IpClient || len+TS || NOUNCE}Kc,AC
+             * Receive-1 -> { len+KeyC,Serviço || len+IdServiço || len+TSf || len+KvToken }
+             */
+
+
+            //SEND-1
+            //Creating of Auth Client encrypted with Access control key
+            byte[] serviceIDbytes = serviceID.getBytes();
+            byte[] uid_bytes = uid.getBytes();
+            Instant ins1 = Instant.now();
+            byte[] instant_bytes = ins1.toString().getBytes();
+            byte[] client_ip = InetAddress.getLocalHost().getHostAddress().getBytes();
+            long nounce = CryptoStuff.getRandom();
+            byte[] auth_Client = new byte[Integer.BYTES+uid_bytes.length+Integer.BYTES+client_ip.length+Integer.BYTES+instant_bytes.length+Long.BYTES];
+            ByteBuffer bb = ByteBuffer.wrap(auth_Client);
+            int curIdx = 0;
+            curIdx = MySSLUtils.putLengthAndBytes(bb, uid_bytes, curIdx);
+            curIdx = MySSLUtils.putLengthAndBytes(bb,client_ip,curIdx);
+            curIdx = MySSLUtils.putLengthAndBytes(bb,instant_bytes,curIdx);
+            bb.putLong(curIdx, nounce);
+            byte[] authClientEncrypted = CryptoStuff.symEncrypt(client_auth_key,auth_Client);
+            byte[] dataToSend1 = new byte[Integer.BYTES+serviceIDbytes.length+ Integer.BYTES+auth_ktoken1024.length+ Integer.BYTES+authClientEncrypted.length];
+
+            bb = ByteBuffer.wrap(dataToSend1);
+            curIdx =0;
+            curIdx = MySSLUtils.putLengthAndBytes(bb,serviceIDbytes,curIdx);
+            curIdx = MySSLUtils.putLengthAndBytes(bb,auth_ktoken1024,curIdx);
+            curIdx = MySSLUtils.putLengthAndBytes(bb,authClientEncrypted,curIdx);
+            MySSLUtils.sendData(socketk, MySSLUtils.buildPackage(Command.ACCESS, dataToSend1));
+
+
+
+            //Receive-1 -> { len+KeyC,Serviço || len+IdServiço || len+TSf || len+KvToken }
+            // ===== Receive Response =====
+
+            byte[] dataToReceive_R1 = MySSLUtils.receiveData(socketk);
+            ResponsePackage rp = ResponsePackage.parse(dataToReceive_R1);
+
+            if (rp.getCode() == CommonValues.ERROR_CODE) {
+                System.out.println("Could not do login (2)");
+                return null;
+            }
+
+            byte[] encrypted_content = rp.getContent();
+            byte[] content = CryptoStuff.symDecrypt(client_auth_key,encrypted_content);
+            bb = ByteBuffer.wrap(content);
+            byte[] key_c_service = MySSLUtils.getNextBytes(bb, curIdx);
+            curIdx += Integer.BYTES +  key_c_service.length;
+            byte[] serviceId_check = MySSLUtils.getNextBytes(bb, curIdx);
+            curIdx += Integer.BYTES +  serviceId_check.length;
+            byte[] timestamp_final = MySSLUtils.getNextBytes(bb, curIdx);
+            curIdx += Integer.BYTES +  timestamp_final.length;
+            byte[] kvToken = MySSLUtils.getNextBytes(bb, curIdx);
+            curIdx += Integer.BYTES +  kvToken.length;
+
+
+            return AccessResponseModel.parse(key_c_service,serviceId_check,timestamp_final,kvToken);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
+        return null;
     }
 
     // ===== AUX METHODS =====
