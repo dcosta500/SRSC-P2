@@ -18,7 +18,7 @@ public class AccessControlSQL extends SQL {
     private void init() {
         con = MySQLiteUtils.resetFile(DB_FILE_NAME);
         MySQLiteUtils.createTable(con, TABLE_NAME,
-                "uid TEXT PRIMARY KEY, serviceID TEXT PRIMARY KEY, permission TEXT");
+                "uid TEXT, serviceID TEXT, permission TEXT, PRIMARY KEY (uid,serviceID)");
     }
 
     @Override

@@ -1,9 +1,7 @@
 package servers.AccessControlServer;
 
-import servers.AuthenticationServer.AuthUsersSQL;
-import servers.AuthenticationServer.DataPackage;
+import utils.DataPackage;
 import utils.CommonValues;
-import utils.CryptoStuff;
 import utils.MySSLUtils;
 import utils.SQL;
 

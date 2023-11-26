@@ -202,11 +202,11 @@ public class AccessControlServer {
                 + Integer.BYTES + tsf.toString().getBytes().length];
 
 
-
+        String serviceID = new String(idBytesService,StandardCharsets.UTF_8);
         String idClient = new String(idClientB,StandardCharsets.UTF_8);
         String perms;
         try{
-            ResultSet result = users.select("serviceID",String.format("uid='%s'",idClient));
+            ResultSet result = users.select("permission",String.format("uid='%s','serviceID='%s'",idClient,serviceID));
             perms = result.getNString(0);
         }catch (Exception e){
             e.printStackTrace();
