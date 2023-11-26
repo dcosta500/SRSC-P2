@@ -20,10 +20,10 @@ public class AccessResponseModel {
         this.serviceId = serviceId;
     }
 
-    public static AccessResponseModel parse(byte[] symKey,byte[] service ,byte[] tsf, byte[]  kvtoken1024) {
+    public static AccessResponseModel parse(byte[] symKey, byte[] service, byte[] tsf, byte[] kvtoken1024) {
         Instant timestampFinal = Instant.parse(new String(tsf, StandardCharsets.UTF_8));
         Key k = CryptoStuff.parseSymKeyFromBytes(symKey);
         String serviceId = new String(service, StandardCharsets.UTF_8);
-        return new AccessResponseModel(kvtoken1024,timestampFinal,k,serviceId);
+        return new AccessResponseModel(kvtoken1024, timestampFinal, k, serviceId);
     }
 }

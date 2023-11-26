@@ -1,6 +1,5 @@
 package servers.MainDispatcher;
 
-import java.net.InetAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 
@@ -8,7 +7,6 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
 import utils.MySSLUtils;
-import utils.ResponsePackage;
 import utils.Command;
 import utils.CommonValues;
 
@@ -130,20 +128,29 @@ public class MainDispatcher {
         return content;
     }
 
-    public static byte[] access(Socket clientSocket, byte[] content){
-        SSLSocket acSocket = startConnectionToACServer();
-        // ===== Send 1 to as =====
-        byte[] dataToSend_S1 = addClientIPToBeggining(clientSocket, content);
+    public static byte[] access(Socket clientSocket, byte[] content) {
+        /*
+         * Data flow (basically add client ip before redirecting to auth server):
+         * Receive-1: { len+IdService || len+token1024 || len+AuthClient}
+         * Send-1: { len+IPclient || len+IdService || len+token1024 || len+AuthClient}
+         * Receive-2: dont care
+         * Send-2: redirect
+         */
 
+        // ===== Receive-1 from client =====
+        // ...
+
+        // ===== Send-1 to ac =====
+        SSLSocket acSocket = startConnectionToACServer();
+        byte[] dataToSend_S1 = addClientIPToBeggining(clientSocket, content);
         MySSLUtils.sendData(acSocket, MySSLUtils.buildPackage(Command.ACCESS, dataToSend_S1));
 
-        // ===== Receive 2 from as =====
+        // ===== Receive-2 from ac =====
         content = MySSLUtils.receiveData(acSocket);
 
+        // ===== Send-2 to client =====
+        MySSLUtils.closeConnectionToServer(acSocket);
         return content;
-
-
-
     }
 
     // ===== Aux Methods =====

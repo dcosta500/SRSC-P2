@@ -9,15 +9,10 @@ import java.security.PrivateKey;
 import java.sql.ResultSet;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Arrays;
-import java.util.Base64;
-
-import javax.crypto.KeyAgreement;
 
 import utils.CommonValues;
 import utils.CryptoStuff;
 import utils.MySSLUtils;
-import utils.ResponsePackage;
 
 public class AuthenticationServer {
 
@@ -31,7 +26,7 @@ public class AuthenticationServer {
         * len+{ len+"auth" || len+Ktoken1024 || len+TSf || Secure Random (long) || len+Kclient,ac }SIGauth }
         *
         * Ktoken1024 = { len+{ len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac } ||
-        *              len+{ len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }SIGauth } Kac
+        *              len+{ len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }SIGauth } Kauth,ac
         */
 
         // ===== RECEIVE 1 =====
@@ -140,7 +135,7 @@ public class AuthenticationServer {
         * len+{ len+"auth" || len+Ktoken1024 || len+TSf || Secure Random (long) || len+Kclient,ac }SIGauth }
         *
         * Ktoken1024 = { len+{ len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac } ||
-        *              len+{ len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }SIGauth } Kac
+        *              len+{ len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }SIGauth } Kauth,ac
         */
 
         // Ktoken1024

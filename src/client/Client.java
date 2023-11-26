@@ -2,6 +2,7 @@ package client;
 
 import javax.net.ssl.*;
 
+import client.responseModels.AccessResponseModel;
 import client.responseModels.LoginResponseModel;
 import utils.*;
 import java.nio.ByteBuffer;
@@ -48,15 +49,16 @@ public class Client {
                 case MULT:
                     ClientCommands.mult(socket);
                     break;
+                case STATS:
+                    ClientCommands.stats(socket);
+                    break;
                 case LOGIN:
                     LoginResponseModel lrm = ClientCommands.login(socket, cmd);
                     processLoginResponse(lrm);
                     break;
-                case STATS:
-                    ClientCommands.stats(socket);
-                    break;
                 case ACCESS:
-                    ClientCommands.access(socket,auth_ktoken1024,client_ac_key,uid,cmd);
+                    ClientCommands.access(socket, auth_ktoken1024, client_ac_key, uid, cmd);
+                    break;
                 default:
             }
             MySSLUtils.closeConnectionToServer(socket);
@@ -73,6 +75,15 @@ public class Client {
         System.out.println("Login successfuly done at: " + lrm.timestampFinal.toString());
         client_ac_key = lrm.clientAc_SymKey;
 
+    }
+
+    private static void processAccessControlResponse(AccessResponseModel arm) {
+        if (arm == null) {
+            return;
+        }
+
+        // TODO: Criar algum tipo de mensagem de sucesso como no processLoginResponse
+        // TODO: Guardar o KvToken vindo de AC
     }
 
     public static void main(String[] args) throws Exception {

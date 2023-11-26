@@ -12,9 +12,13 @@ public abstract class CommonValues {
     public static final int AC_PORT_NUMBER = 8082;
     public static final int SS_PORT_NUMBER = 8083;
 
+    // Access Permissions
+    public static final String PERM_DENY = "deny";
+    public static final String PERM_READ = "allow read";
+    public static final String PERM_READ_WRITE = "allow read write";
+
     // Server IDs
     public static final String AUTH_ID = "auth";
-
     public static final String AC_ID = "access_control";
 
     // Time
