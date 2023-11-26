@@ -116,12 +116,7 @@ public class AccessControlServer {
         curIdx = MySSLUtils.putLengthAndBytes(bb, idBytesService, curIdx);
         curIdx = MySSLUtils.putLengthAndBytes(bb, tsf.toString().getBytes(), curIdx);
         curIdx = MySSLUtils.putLengthAndBytes(bb, kvToken, curIdx);
-
-
-        System.out.println("Decrypted data: " + sendDecrypted.toString());
         byte[] sendEncrypted = CryptoStuff.symEncrypt(clientAC, sendDecrypted);
-        System.out.println("Encrypted data: " + sendEncrypted.toString());
-        System.out.println("Size data: " +  sendEncrypted.length);
         return MySSLUtils.buildResponse(CommonValues.OK_CODE, sendEncrypted);
     }
 

@@ -45,7 +45,6 @@ public class ACServer {
                     DataPackage dp = DataPackage.parse(dataIn);
 
                     byte[] result = executeCommand(socket, dp);
-                    System.out.println("Sent:" + result.toString());
                     MySSLUtils.sendData(socket, result);
 
                     socket.close();

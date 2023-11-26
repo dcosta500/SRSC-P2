@@ -126,7 +126,6 @@ public class MainDispatcher {
         MySSLUtils.closeConnectionToServer(asSocket);
 
         // ===== Send 4 to client =====
-        System.out.println("Sent:" + content.toString());
         return content;
     }
 
@@ -152,7 +151,6 @@ public class MainDispatcher {
 
         // ===== Send-2 to client =====
         MySSLUtils.closeConnectionToServer(acSocket);
-        System.out.println("Sent:" + content.toString());
         return content;
     }
 

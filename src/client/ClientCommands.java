@@ -161,7 +161,6 @@ public abstract class ClientCommands {
         // len+{ len+"auth" || len+Ktoken1024 || len+TSf || Secure Random (long) || len+Kclient,ac }SIGauth }
 
         byte[] dataToReceive_R2 = MySSLUtils.receiveData(socket);
-        System.out.println("Login receive: " + dataToReceive_R2);
         rp = ResponsePackage.parse(dataToReceive_R2);
 
         if (rp.getCode() == CommonValues.ERROR_CODE) {
@@ -273,22 +272,19 @@ public abstract class ClientCommands {
         // { len+Kc,service || len+IdService || len+TSf || len+KvToken }Kc,ac
 
         byte[] dataToReceive_R1 = MySSLUtils.receiveData(socket);
-        System.out.println("Received: " + dataToReceive_R1.toString());
         ResponsePackage rp = ResponsePackage.parse(dataToReceive_R1);
 
 
-        System.out.println(rp.getCode() + " " + rp.getLength());
         if (rp.getCode() == CommonValues.ERROR_CODE) {
             System.out.println("Could not do login (2)");
             return null;
         }
 
-        System.out.println("Auth key: "+client_auth_key.toString());
-        System.out.println("Encrypted data : " + rp.getContent());
-        byte[] content = CryptoStuff.symDecrypt(client_auth_key, rp.getContent());
-        System.out.println("Decrypted data: " + content.toString());
-        bb = ByteBuffer.wrap(content);
 
+        byte[] content = CryptoStuff.symDecrypt(client_auth_key, rp.getContent());
+
+        bb = ByteBuffer.wrap(content);
+        curIdx = 0;
         byte[] key_c_service = MySSLUtils.getNextBytes(bb, curIdx);
         curIdx += Integer.BYTES + key_c_service.length;
 
