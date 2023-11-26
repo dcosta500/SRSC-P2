@@ -47,6 +47,8 @@ public class MainDispatcherServer {
                 return MainDispatcher.login(socket, dp.getContent());
             case STATS:
                 return MainDispatcher.clientStats(socket, dp.getContent());
+            case ACCESS:
+                return MainDispatcher.access(socket, dp.getContent()) ;
             default:
                 return new byte[0];
         }

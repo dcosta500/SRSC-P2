@@ -1,6 +1,7 @@
 package servers.AccessControlServer;
 
 import servers.AuthenticationServer.AuthUsersSQL;
+import utils.CommonValues;
 import utils.CryptoStuff;
 import utils.MySSLUtils;
 
@@ -10,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.time.Duration;
 import java.time.Instant;
 
 public class AccessControlServer {
@@ -21,7 +23,7 @@ public class AccessControlServer {
          * Send-1 -> { len+KeyC,Serviço || len+IdServiço || len+TSf || len+KvToken }
          */
 
-        String ipClientR1;
+        String ipClient;
         String uidService;
 
         int curIdx = 0;
@@ -29,9 +31,9 @@ public class AccessControlServer {
 
 
         //Receive-1-> { len+ipClient || len+IdServiço || len+token1024 || len+AuthClient}
-        byte[] ipClientBytesR1 = MySSLUtils.getNextBytes(bb, curIdx);
-        ipClientR1 = new String(ipClientBytesR1, StandardCharsets.UTF_8);
-        curIdx += Integer.BYTES + ipClientBytesR1.length;
+        byte[] ipClientBytes = MySSLUtils.getNextBytes(bb, curIdx);
+        ipClient = new String(ipClientBytes, StandardCharsets.UTF_8);
+        curIdx += Integer.BYTES + ipClientBytes.length;
 
         byte[] uidBytesService = MySSLUtils.getNextBytes(bb, curIdx);
         uidService = new String(uidBytesService, StandardCharsets.UTF_8);
@@ -48,10 +50,73 @@ public class AccessControlServer {
         Key asAcSymmetricKey = CryptoStuff.parseSymKeyFromBase64(System.getProperty("SYM_KEY_AUTH_AC"));
         byte[] decipheredToken = CryptoStuff.symDecrypt(asAcSymmetricKey,cipheredToken);
 
+        Key clientAC = checkToken(decipheredToken,ipClient);
+        if(clientAC==null) return null;
 
+        //AuthClient = {len+IdClient || len+ IpClient || len+TS || NOUNCE}Kc,AC
+        byte[] authClientDecrypted = CryptoStuff.symDecrypt(clientAC,authClientEncrypted);
+
+        bb = ByteBuffer.wrap(authClientDecrypted);
+        curIdx=0;
+
+
+        byte[] idClientB = MySSLUtils.getNextBytes(bb,curIdx);
+        String idClient = new String(idClientB,StandardCharsets.UTF_8);
+        curIdx += Integer.BYTES + idClientB.length;
+
+        byte[] ipClientB_auth = MySSLUtils.getNextBytes(bb,curIdx);
+        String ipClient_auth = new String(ipClientB_auth,StandardCharsets.UTF_8);
+        curIdx += Integer.BYTES + ipClientB_auth.length;
+
+        byte[] timestampB_auth = MySSLUtils.getNextBytes(bb,curIdx);
+        Instant timestamp_auth = Instant.parse(new String(timestampB_auth,StandardCharsets.UTF_8));
+        curIdx += Integer.BYTES + timestampB_auth.length;
+
+        long nounce = bb.getLong(curIdx); //TODO guarantee that Nounce doesnt repeat
+
+        //Send-1 -> { len+KeyC,Serviço || len+IdServiço || len+TSf || len+KvToken }
+
+        Instant tsi = Instant.now();
+        Instant tsf= tsi.plus(Duration.ofHours(CommonValues.TOKEN_VALIDITY_HOURS));
+        byte[] clientSSSymKey_bytes = CryptoStuff.createSymKey().getEncoded();
+
+        //KvToken -> {len+KcService || len+IdClient || len+IpClient || len+IdService || len+Tsi || len+Tsf
+        byte[] kvTokenDecrypted = new byte[Integer.BYTES + clientSSSymKey_bytes.length+Integer.BYTES +Integer.BYTES+idClientB.length+Integer.BYTES+ipClientB_auth.length+
+                Integer.BYTES + uidBytesService.length+ Integer.BYTES+tsi.toString().getBytes().length + Integer.BYTES + tsf.toString().getBytes().length];
+        bb = ByteBuffer.wrap(kvTokenDecrypted);
+        curIdx=0;
+        curIdx = MySSLUtils.putLengthAndBytes(bb,clientSSSymKey_bytes,curIdx);
+        curIdx = MySSLUtils.putLengthAndBytes(bb,uidBytesService,curIdx);
+        curIdx = MySSLUtils.putLengthAndBytes(bb,ipClientBytes,curIdx);
+        curIdx = MySSLUtils.putLengthAndBytes(bb,uidBytesService,curIdx);
+        curIdx = MySSLUtils.putLengthAndBytes(bb,tsi.toString().getBytes(),curIdx);
+        curIdx = MySSLUtils.putLengthAndBytes(bb,tsf.toString().getBytes(),curIdx);
+        byte[] kvTokenEncrypted = CryptoStuff.symEncrypt(CryptoStuff.parseSymKeyFromBase64(System.getProperty("SYM_KEY_AC_SS")),kvTokenDecrypted);
+
+
+        byte[] sendDecrypted = new byte[Integer.BYTES + clientSSSymKey_bytes.length + Integer.BYTES+uidBytesService.length+
+                Integer.BYTES+tsf.toString().getBytes().length+Integer.BYTES+ kvTokenEncrypted.length];
+
+        bb = ByteBuffer.wrap(sendDecrypted);
+        curIdx=0;
+        curIdx= MySSLUtils.putLengthAndBytes(bb,clientSSSymKey_bytes,curIdx);
+        curIdx = MySSLUtils.putLengthAndBytes(bb,uidBytesService,curIdx);
+        curIdx = MySSLUtils.putLengthAndBytes(bb,tsf.toString().getBytes(),curIdx);
+        curIdx = MySSLUtils.putLengthAndBytes(bb,kvTokenEncrypted,curIdx);
+
+        byte[] sendEncrypted = CryptoStuff.symEncrypt(clientAC,sendDecrypted);
+
+
+        return MySSLUtils.buildResponse(CommonValues.OK_CODE, sendEncrypted);
+    }
+
+
+    private static Key checkToken(byte[] token, String ip){
+        ByteBuffer bb;
+        int curIdx=0;
         //Ktoken -> {len+IdClient || len+IpClient || len+IdAC || len+TSi || len+TSf || len+Kcac || len+Ass(All)
-        bb = ByteBuffer.wrap(decipheredToken);
-        curIdx = 0;
+        bb = ByteBuffer.wrap(token);
+
 
         byte[] idClient_tokenB = MySSLUtils.getNextBytes(bb,curIdx);
         String idClient_token = new String(idClient_tokenB,StandardCharsets.UTF_8);
@@ -67,7 +132,6 @@ public class AccessControlServer {
         curIdx += Integer.BYTES + idAC_tokenB.length;
 
 
-
         byte[] tsi_tokenB = MySSLUtils.getNextBytes(bb,curIdx);
         Instant timestampInitial = Instant.parse(new String(tsi_tokenB, StandardCharsets.UTF_8));
         curIdx += Integer.BYTES + tsi_tokenB.length;
@@ -77,32 +141,20 @@ public class AccessControlServer {
         curIdx += Integer.BYTES + tsf_tokenB.length;
 
 
+
         byte[] key_tokenB = MySSLUtils.getNextBytes(bb,curIdx);
-        Key keyClientAc = CryptoStuff.parseSymKeyFromBytes(key_tokenB);
+        Key key = CryptoStuff.parseSymKeyFromBytes(key_tokenB);
         curIdx += Integer.BYTES + key_tokenB.length;
 
-        byte[] ass_tokenB = MySSLUtils.getNextBytes(bb,curIdx);
-        PublicKey privKey = CryptoStuff.getPublicKeyFromTruststore("as", "ac123456");
+        byte[] tokenNoSign = new byte[curIdx];
+        System.arraycopy(token ,0, tokenNoSign, 0, curIdx);
+
+        byte[] sign_tokenB = MySSLUtils.getNextBytes(bb,curIdx);
+        PublicKey pubKey = CryptoStuff.getPublicKeyFromTruststore("as", "ac123456");
+
+        boolean checkSignature = CryptoStuff.verifySignature(pubKey,tokenNoSign,sign_tokenB);
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        return null;
+        return (ip.equals(ipClient) && checkSignature && idAC_token.equals(CommonValues.AC_ID) && Instant.now().isAfter(timestampFinal)) ? key : null;
     }
 }

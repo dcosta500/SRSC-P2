@@ -137,6 +137,12 @@ public abstract class CryptoStuff {
         return null;
     }
 
+    /**
+     * Generate Diffie-Hellman shared secret
+     * @param privateKey the private key
+     * @param publicKeyBytes public key in bytes
+     * @return the shared secret
+     */
     public static byte[] dhGenerateSharedSecret(PrivateKey privateKey, byte[] publicKeyBytes) {
         try {
             KeyFactory keyFactory = KeyFactory.getInstance("DH");
@@ -168,6 +174,12 @@ public abstract class CryptoStuff {
 
     // ===== Symmetric Encryption =====
 
+
+    /**
+     * Parse byte array to key
+     * @param symKey the symmetric key as a byte array
+     * @return the symetric key
+     */
     public static Key parseSymKeyFromBytes(byte[] symKey) {
         try {
             return new SecretKeySpec(symKey, SYMMETRIC_ALG);
@@ -178,6 +190,12 @@ public abstract class CryptoStuff {
         return null;
     }
 
+
+    /**
+     * Parse String base 64 encryption to key
+     * @param b64Key The key in base64 format
+     * @return the key
+     */
     public static Key parseSymKeyFromBase64(String b64Key) {
         return parseSymKeyFromBytes(Base64.getDecoder().decode(b64Key));
     }
@@ -309,6 +327,13 @@ public abstract class CryptoStuff {
         return new byte[0];
     }
 
+    /**
+     * Checks if signature is valid
+     * @param pubKey the public key of the signature owner
+     * @param content the content signed
+     * @param sig the signature
+     * @return if the signature is valid
+     */
     public static boolean verifySignature(PublicKey pubKey, byte[] content, byte[] sig) {
         try {
             Signature signature = Signature.getInstance(SIG_CIPHERSUITE);
@@ -324,6 +349,13 @@ public abstract class CryptoStuff {
 
     // ===== File Parsing Methods =====
     // TODO: Document method
+
+    /**
+     *
+     * @param alias name of the alias
+     * @param trstPassword the truststore password
+     * @return the public key for that alias
+     */
     public static PublicKey getPublicKeyFromTruststore(String alias, String trstPassword) {
         try {
             KeyStore truststore = KeyStore.getInstance(TRUSTSTORE_TYPE);
@@ -338,6 +370,12 @@ public abstract class CryptoStuff {
         return null;
     }
 
+    /**
+     *
+     * @param alias name of the alias
+     * @param kstrPassword the keystore password
+     * @return the private key for that alias
+     */
     public static PrivateKey getPrivateKeyFromKeystore(String alias, String kstrPassword) {
         try {
             KeyStore keystore = KeyStore.getInstance("JKS");

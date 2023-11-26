@@ -130,6 +130,22 @@ public class MainDispatcher {
         return content;
     }
 
+    public static byte[] access(Socket clientSocket, byte[] content){
+        SSLSocket acSocket = startConnectionToACServer();
+        // ===== Send 1 to as =====
+        byte[] dataToSend_S1 = addClientIPToBeggining(clientSocket, content);
+
+        MySSLUtils.sendData(acSocket, MySSLUtils.buildPackage(Command.ACCESS, dataToSend_S1));
+
+        // ===== Receive 2 from as =====
+        content = MySSLUtils.receiveData(acSocket);
+
+        return content;
+
+
+
+    }
+
     // ===== Aux Methods =====
     private static byte[] addClientIPToBeggining(Socket clientSocket, byte[] content) {
         byte[] ipClientBytes = getClientIPAddress(clientSocket).getBytes();
@@ -153,6 +169,14 @@ public class MainDispatcher {
         SSLSocketFactory factory = MySSLUtils.createClientSocketFactory("certs/mdCrypto/keystore_md.jks", "md123456");
         SSLSocket socket = MySSLUtils.startNewConnectionToServer(factory, CommonValues.AS_HOSTNAME,
                 CommonValues.AS_PORT_NUMBER);
+
+        return socket;
+    }
+
+    private static SSLSocket startConnectionToACServer() {
+        SSLSocketFactory factory = MySSLUtils.createClientSocketFactory("certs/mdCrypto/keystore_md.jks", "md123456");
+        SSLSocket socket = MySSLUtils.startNewConnectionToServer(factory, CommonValues.AC_HOSTNAME,
+                CommonValues.AC_PORT_NUMBER);
 
         return socket;
     }

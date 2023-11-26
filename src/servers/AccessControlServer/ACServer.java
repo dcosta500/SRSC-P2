@@ -59,6 +59,12 @@ public class ACServer {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        try (FileInputStream input = new FileInputStream(curDir + "/src/configs/access_control_server.conf")) {
+            props.load(input);
+            System.setProperty("SYM_KEY_AC_SS", props.getProperty("SYM_KEY_AC_SS"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public static void main(String[] args) throws Exception {
