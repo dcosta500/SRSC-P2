@@ -21,6 +21,10 @@ public class Client {
     private static byte[] auth_ktoken1024;
     private static Key client_ac_key;
 
+    private static byte[] control_vtoken1024;
+
+    private static Key client_ss_key;
+
     private static void readCommands() {
         /*
          * Instructions to add a new command
@@ -57,7 +61,8 @@ public class Client {
                     processLoginResponse(lrm);
                     break;
                 case ACCESS:
-                    ClientCommands.access(socket, auth_ktoken1024, client_ac_key, uid, cmd);
+                    AccessResponseModel arm = ClientCommands.access(socket, auth_ktoken1024, client_ac_key, uid, cmd);
+                    processAccessControlResponse(arm);
                     break;
                 default:
             }
@@ -82,8 +87,9 @@ public class Client {
             return;
         }
 
-        // TODO: Criar algum tipo de mensagem de sucesso como no processLoginResponse
-        // TODO: Guardar o KvToken vindo de AC
+        control_vtoken1024 = arm.kvtoken1024;
+        System.out.println("Access Control granted successfuly done at: " + arm.timestampFinal.toString());
+        client_ss_key = arm.clientService_key;
     }
 
     public static void main(String[] args) throws Exception {

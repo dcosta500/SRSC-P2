@@ -3,6 +3,7 @@ package servers.AccessControlServer;
 import servers.AuthenticationServer.AuthUsersSQL;
 import servers.AuthenticationServer.DataPackage;
 import utils.CommonValues;
+import utils.CryptoStuff;
 import utils.MySSLUtils;
 
 import java.io.FileInputStream;
@@ -20,20 +21,17 @@ public class ACServer {
     private static final String PASSWORD = "ac123456";
     private static final boolean DO_CLIENT_AUTH = true;
 
+    private static final String[] usernames = { "alice", "bob", "carol", "david", "eric" };
+
     private static final Set<Long> nonceSet = new HashSet<>();
 
-    // TODO: Fazer a BD do Access Control
-    // as entries dessa bd vao ter o formato indicado no enunciado
-    // { uid, permissions }
-    // permissions é uma string que pode ter 3 valores (as quais já têm constantes
-    // criadas no CommonValues class):
-    // "deny", "allow read", "allow read write"
-    private static AuthUsersSQL users;
+
+    private static AccessControlSQL users;
 
     private static byte[] executeCommand(Socket socket, DataPackage dp) {
         switch (dp.getCommand()) {
             case ACCESS:
-                return AccessControlServer.access(socket, nonceSet, dp.getContent());
+                return AccessControlServer.access(socket, nonceSet, dp.getContent(),users);
             default:
                 return new byte[0];
         }
@@ -62,10 +60,9 @@ public class ACServer {
         Properties props = new Properties();
         String curDir = System.getProperty("user.dir");
 
-        // TODO: Não uses os .conf doutros servers aqui. Qualquer coisa copia mesmo
-        // a informação de um .conf para o deste server.
 
-        try (FileInputStream input = new FileInputStream(curDir + "/src/configs/auth_server.conf")) {
+
+        try (FileInputStream input = new FileInputStream(curDir + "/src/configs/access_control_server.conf")) {
             props.load(input);
             System.setProperty("SYM_KEY_AUTH_AC", props.getProperty("SYM_KEY_AUTH_AC"));
         } catch (IOException e) {
@@ -79,11 +76,28 @@ public class ACServer {
         }
     }
 
+    private static void initDb() {
+        try {
+            Class.forName("org.sqlite.JDBC");
+
+            users = new AccessControlSQL();
+            users.insert("alice",CommonValues.SS_ID,CommonValues.PERM_READ_WRITE);
+            users.insert("bob",CommonValues.SS_ID,CommonValues.PERM_READ);
+            users.insert("carol",CommonValues.SS_ID,CommonValues.PERM_DENY);
+            users.insert("david",CommonValues.SS_ID,CommonValues.PERM_DENY);
+            users.insert("eric",CommonValues.SS_ID,CommonValues.PERM_READ);
+        } catch (Exception e) {
+            System.out.println("Error while trying to initialize database.");
+            e.printStackTrace();
+        }
+    }
+
     public static void main(String[] args) throws Exception {
 
         System.setProperty("javax.net.ssl.trustStore", SERVER_TRUSTSTORE_PATH);
 
-        // TODO: Faz aqui um initDB() tal como no auth
+
+        initDb();
         initConf();
 
         ServerSocket ss = MySSLUtils.createServerSocket(CommonValues.AC_PORT_NUMBER, SERVER_KEYSTORE_PATH, PASSWORD,

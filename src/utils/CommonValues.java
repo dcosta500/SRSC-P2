@@ -21,6 +21,8 @@ public abstract class CommonValues {
     public static final String AUTH_ID = "auth";
     public static final String AC_ID = "access_control";
 
+    public static final String SS_ID = "storage_service";
+
     // Time
     public static final int TOKEN_VALIDITY_HOURS = 24;
 
