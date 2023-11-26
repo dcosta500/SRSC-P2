@@ -161,6 +161,7 @@ public abstract class ClientCommands {
         // len+{ len+"auth" || len+Ktoken1024 || len+TSf || Secure Random (long) || len+Kclient,ac }SIGauth }
 
         byte[] dataToReceive_R2 = MySSLUtils.receiveData(socket);
+        System.out.println("Login receive: " + dataToReceive_R2);
         rp = ResponsePackage.parse(dataToReceive_R2);
 
         if (rp.getCode() == CommonValues.ERROR_CODE) {
@@ -253,8 +254,8 @@ public abstract class ClientCommands {
         // AuthClient = {len+IdClient || len+ IpClient || len+TS || NOUNCE}Kc,AC
 
         //Creating of Auth Client encrypted with Access control key
-        byte[] serviceIDbytes = serviceID.getBytes();
-        byte[] clientAuthenticator = createClientAuthenticator(uid, client_auth_key);
+        byte[] serviceIDbytes = serviceID.split(" ")[1].getBytes();
+        byte[] clientAuthenticator = createClientAuthenticator(uid, client_auth_key,socket);
 
         byte[] dataToSend1 = new byte[Integer.BYTES + serviceIDbytes.length + Integer.BYTES + auth_ktoken1024.length
                 + Integer.BYTES + clientAuthenticator.length];
@@ -272,14 +273,20 @@ public abstract class ClientCommands {
         // { len+Kc,service || len+IdService || len+TSf || len+KvToken }Kc,ac
 
         byte[] dataToReceive_R1 = MySSLUtils.receiveData(socket);
+        System.out.println("Received: " + dataToReceive_R1.toString());
         ResponsePackage rp = ResponsePackage.parse(dataToReceive_R1);
 
+
+        System.out.println(rp.getCode() + " " + rp.getLength());
         if (rp.getCode() == CommonValues.ERROR_CODE) {
             System.out.println("Could not do login (2)");
             return null;
         }
 
+        System.out.println("Auth key: "+client_auth_key.toString());
+        System.out.println("Encrypted data : " + rp.getContent());
         byte[] content = CryptoStuff.symDecrypt(client_auth_key, rp.getContent());
+        System.out.println("Decrypted data: " + content.toString());
         bb = ByteBuffer.wrap(content);
 
         byte[] key_c_service = MySSLUtils.getNextBytes(bb, curIdx);
@@ -298,11 +305,13 @@ public abstract class ClientCommands {
     }
 
     // ===== AUX METHODS =====
-    private static byte[] createClientAuthenticator(String uid, Key client_auth_key) {
+    private static byte[] createClientAuthenticator(String uid, Key client_auth_key,SSLSocket socket) {
         try {
             long nounce = CryptoStuff.getRandom();
             byte[] uid_bytes = uid.getBytes();
-            byte[] client_ip = InetAddress.getLocalHost().getHostAddress().getBytes();
+            /*System.out.println(InetAddress.getLocalHost().getHostAddress());
+            System.out.println(socket.getInetAddress().getHostAddress());*/
+            byte[] client_ip = socket.getInetAddress().getHostAddress().getBytes();
             byte[] instant_bytes = Instant.now().toString().getBytes();
 
             byte[] auth_Client = new byte[3 * Integer.BYTES + uid_bytes.length + client_ip.length + instant_bytes.length

@@ -117,13 +117,18 @@ public class AccessControlServer {
         curIdx = MySSLUtils.putLengthAndBytes(bb, tsf.toString().getBytes(), curIdx);
         curIdx = MySSLUtils.putLengthAndBytes(bb, kvToken, curIdx);
 
-        byte[] sendEncrypted = CryptoStuff.symEncrypt(clientAC, sendDecrypted);
 
+        System.out.println("Decrypted data: " + sendDecrypted.toString());
+        byte[] sendEncrypted = CryptoStuff.symEncrypt(clientAC, sendDecrypted);
+        System.out.println("Encrypted data: " + sendEncrypted.toString());
+        System.out.println("Size data: " +  sendEncrypted.length);
         return MySSLUtils.buildResponse(CommonValues.OK_CODE, sendEncrypted);
     }
 
     // ===== AUX METHODS =====
     private static boolean checkClientAuthenticatorValidity(String ipClient_rc,String ipClient_auth,String idClient_auth,String idClient_token) {
+        MySSLUtils.printToLogFile("AccessControl",ipClient_rc+ " " + ipClient_auth +" " + idClient_auth + " " + idClient_token);
+        System.out.println(ipClient_rc+ " " + ipClient_auth +" " + idClient_auth + " " + idClient_token);
         return ipClient_rc.equals(ipClient_auth) && idClient_auth.equals(idClient_token);
     }
 
@@ -142,7 +147,7 @@ public class AccessControlServer {
 
         PublicKey pubKey = CryptoStuff.getPublicKeyFromTruststore("as", "ac123456");
         if (!CryptoStuff.verifySignature(pubKey, tokenFirstHalf, tokenSig)) {
-            System.out.println("Signature does not match.");
+            MySSLUtils.printToLogFile("AccessControl","Signature does not match.");
             return null;
         }
 
@@ -156,10 +161,10 @@ public class AccessControlServer {
 
         byte[] ipClientBytes = MySSLUtils.getNextBytes(bb, curIdx);
         String ipClient2 = new String(ipClientBytes, StandardCharsets.UTF_8);
-        curIdx += Integer.BYTES + idClientBytes.length;
+        curIdx += Integer.BYTES + ipClientBytes.length;
 
         if (!ipClient.equals(ipClient2)) {
-            System.out.println("Client ips do not match.");
+            MySSLUtils.printToLogFile("AccessControl","Client ips do not match.");
             return null;
         }
 
@@ -168,7 +173,7 @@ public class AccessControlServer {
         curIdx += Integer.BYTES + idACBytes.length;
 
         if (!idAC.equals(CommonValues.AC_ID)) {
-            System.out.println("Access Control Ids do not match.");
+            MySSLUtils.printToLogFile("AccessControl","Access Control Ids do not match.");
             return null;
         }
 
@@ -181,13 +186,14 @@ public class AccessControlServer {
         curIdx += Integer.BYTES + tsfBytes.length;
 
         if (Instant.now().isAfter(timestampFinal)) {
-            System.out.println("Token life expired.");
+            MySSLUtils.printToLogFile("AccessControl","Token life expired.");
             return null;
         }
 
         byte[] keyClientACBytes = MySSLUtils.getNextBytes(bb, curIdx);
         Key keyClientAC = CryptoStuff.parseSymKeyFromBytes(keyClientACBytes);
         curIdx += Integer.BYTES + keyClientACBytes.length;
+        System.out.println("Auth key: "+keyClientAC.toString());
 
         return keyClientAC;
     }
@@ -196,23 +202,26 @@ public class AccessControlServer {
                                       byte[] ipClientB_auth,byte[] clientSSSymKey_bytes,Instant tsi,Instant tsf,SQL users){
         ByteBuffer bb;
         int curIdx=0;
-        byte[] kvTokenDecrypted = new byte[Integer.BYTES + clientSSSymKey_bytes.length + Integer.BYTES + Integer.BYTES
-                + idClientB.length + Integer.BYTES + ipClientB_auth.length +
-                Integer.BYTES + idBytesService.length + Integer.BYTES + tsi.toString().getBytes().length
-                + Integer.BYTES + tsf.toString().getBytes().length];
+
 
 
         String serviceID = new String(idBytesService,StandardCharsets.UTF_8);
         String idClient = new String(idClientB,StandardCharsets.UTF_8);
         String perms;
         try{
-            ResultSet result = users.select("permission",String.format("uid='%s','serviceID='%s'",idClient,serviceID));
-            perms = result.getNString(0);
+            System.out.println("Service ID: " + serviceID);
+            System.out.println("Id client " + idClient);
+            ResultSet result = users.select("permission",String.format("uid='%s' AND serviceID='%s'",idClient,serviceID));
+            System.out.println(result);
+            perms = result.getString("permission");
         }catch (Exception e){
             e.printStackTrace();
             return null;
         }
-
+        byte[] kvTokenDecrypted = new byte[Integer.BYTES + clientSSSymKey_bytes.length + Integer.BYTES + idBytesService.length+Integer.BYTES
+                + idClientB.length + Integer.BYTES + ipClientB_auth.length +
+                Integer.BYTES + idBytesService.length + Integer.BYTES + tsi.toString().getBytes().length
+                + Integer.BYTES + tsf.toString().getBytes().length + Integer.BYTES + perms.getBytes().length];
         bb = ByteBuffer.wrap(kvTokenDecrypted);
         curIdx = MySSLUtils.putLengthAndBytes(bb, clientSSSymKey_bytes, curIdx);
         curIdx = MySSLUtils.putLengthAndBytes(bb, idBytesService, curIdx);
