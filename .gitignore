@@ -107,4 +107,5 @@ src/client/Client.java
 /.idea/dataSources.xml
 /.idea/inspectionProfiles/Project_Default.xml
 /.idea/uiDesigner.xml
+/.idea/
 /SRSC-P2.iml

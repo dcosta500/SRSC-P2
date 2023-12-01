@@ -4,16 +4,16 @@ services:
     MainDispatcher:
         image: main_dispatcher
         ports:
-          - "8080"
+          - "8080:8080"
     Authentication:
       image: authentication_server
       ports:
-        - "8081"
+        - "8081:8081"
     AccessControl:
       image: access_control
       ports:
-        - "8082"
+        - "8082:8082"
     StorageService:
       image: storage_service
       ports:
-        - "8083"
+        - "8083:8083"
