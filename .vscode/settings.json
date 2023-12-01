@@ -1,7 +1,0 @@
-{
-  "java.project.referencedLibraries": [
-    "lib/**/*.jar",
-    "src/jar/slf4j-api-1.7.36.jar",
-    "src/jar/sqlite-jdbc-3.44.0.0.jar"
-  ]
-}

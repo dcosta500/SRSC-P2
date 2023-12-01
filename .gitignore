@@ -96,3 +96,14 @@ src/client/Client.java
 /.idea/misc.xml
 /.idea/modules.xml
 /.idea/vcs.xml
+/runAC.sh
+/runAS.sh
+/runC.sh
+/runMD.sh
+/runSS.sh
+/certs/genCerts.sh
+/compile.sh
+/out/
+/.idea/dataSources.xml
+/.idea/inspectionProfiles/Project_Default.xml
+/.idea/uiDesigner.xml
