@@ -143,7 +143,6 @@ public abstract class ClientCommands {
 
         String hash = CryptoStuff.hashB64(pwd);
         Key pbeKey_R1 = CryptoStuff.pbeCreateKeyFromPassword(hash);
-        System.out.println(pbeKey_R1.toString());
         byte[] srEncryptedBytes_R1 = CryptoStuff.pbeEncrypt(pbeKey_R1, srBytes_r1);
 
         // ===== Send 2 =====
