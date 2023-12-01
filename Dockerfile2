@@ -1,0 +1,8 @@
+FROM openjdk:17
+
+WORKDIR /app
+
+COPY /out /app/
+COPY /jar /app/
+
+CMD ["java" ,"-cp" ,"out:src/jar/sqlite-jdbc-3.44.0.0.jar:src/jar/slf4j-api-1.7.36.jar", "servers.AccessControlServer.ACServer"]
