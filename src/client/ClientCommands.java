@@ -96,7 +96,7 @@ public abstract class ClientCommands {
         // Send-1 -> { len+uid }
         String[] cmdArgs = cmd.split(" ");
         String uid = cmdArgs[1];
-        String hash = CryptoStuff.hashB64(cmdArgs[2]);
+        String pwd = cmdArgs[2];
 
         byte[] uidBytes = uid.getBytes();
 
@@ -141,7 +141,9 @@ public abstract class ClientCommands {
 
         byte[] pubKeyClientBytes_R1 = kp.getPublic().getEncoded();
 
+        String hash = CryptoStuff.hashB64(pwd);
         Key pbeKey_R1 = CryptoStuff.pbeCreateKeyFromPassword(hash);
+        System.out.println(pbeKey_R1.toString());
         byte[] srEncryptedBytes_R1 = CryptoStuff.pbeEncrypt(pbeKey_R1, srBytes_r1);
 
         // ===== Send 2 =====
@@ -304,17 +306,15 @@ public abstract class ClientCommands {
         try {
             long nounce = CryptoStuff.getRandom();
             byte[] uid_bytes = uid.getBytes();
-            byte[] client_ip = socket.getLocalAddress().getHostAddress().getBytes();
             byte[] instant_bytes = Instant.now().toString().getBytes();
 
-            byte[] auth_Client = new byte[3 * Integer.BYTES + uid_bytes.length + client_ip.length + instant_bytes.length
+            byte[] auth_Client = new byte[2 * Integer.BYTES + uid_bytes.length  + instant_bytes.length
                     + Long.BYTES];
 
             ByteBuffer bb = ByteBuffer.wrap(auth_Client);
 
             int curIdx = 0;
             curIdx = MySSLUtils.putLengthAndBytes(bb, uid_bytes, curIdx);
-            curIdx = MySSLUtils.putLengthAndBytes(bb, client_ip, curIdx);
             curIdx = MySSLUtils.putLengthAndBytes(bb, instant_bytes, curIdx);
             bb.putLong(curIdx, nounce);
 

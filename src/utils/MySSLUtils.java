@@ -75,10 +75,10 @@ public abstract class MySSLUtils {
     }
 
     public static ServerSocket createServerSocket(int portNumber, String serverKeystorePath, String password,
-            boolean doClientAuth, InetAddress hostname) {
+            boolean doClientAuth) {
         try {
             ServerSocketFactory ssf = MySSLUtils.createServerSocketFactory(serverKeystorePath, password);
-            ServerSocket ss = ssf.createServerSocket(portNumber,0,hostname);
+            ServerSocket ss = ssf.createServerSocket(portNumber);
 
             ((SSLServerSocket) ss).setEnabledProtocols(new String[] { "TLSv1.2" });
             ((SSLServerSocket) ss).setEnabledCipherSuites(new String[] { "TLS_RSA_WITH_AES_128_GCM_SHA256" });

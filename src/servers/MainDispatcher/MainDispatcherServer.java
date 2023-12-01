@@ -19,10 +19,12 @@ public class MainDispatcherServer {
 
     public static void main(String[] args) throws Exception {
 
+        System.out.println(InetAddress.getLocalHost().getHostAddress());
+
         System.setProperty("javax.net.ssl.trustStore", SERVER_TRUSTSTORE_PATH);
 
         ServerSocket ss = MySSLUtils.createServerSocket(CommonValues.MD_PORT_NUMBER, SERVER_KEYSTORE_PATH, PASSWORD,
-                DO_CLIENT_AUTH, InetAddress.getByName(MD_HOSTNAME));
+                DO_CLIENT_AUTH);
 
         while (true) {
             Socket socket;

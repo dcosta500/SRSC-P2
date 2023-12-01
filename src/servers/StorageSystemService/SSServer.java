@@ -63,12 +63,14 @@ public class SSServer {
     }
     public static void main(String[] args) throws Exception {
 
+        System.out.println(InetAddress.getLocalHost().getHostAddress());
+
         System.setProperty("javax.net.ssl.trustStore", SERVER_TRUSTSTORE_PATH);
 
         initConf();
 
         ServerSocket ss = MySSLUtils.createServerSocket(CommonValues.SS_PORT_NUMBER, SERVER_KEYSTORE_PATH, PASSWORD,
-                DO_CLIENT_AUTH, InetAddress.getByName(SS_HOSTNAME));
+                DO_CLIENT_AUTH);
 
         while (true) {
             Socket socket;

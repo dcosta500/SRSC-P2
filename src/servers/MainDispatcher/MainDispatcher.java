@@ -69,8 +69,7 @@ public class MainDispatcher {
     public static byte[] clientStats(Socket clientSocket, byte[] content) {
         try {
             byte[] contentToSend = new byte[100];
-            byte[] sBytes = clientSocket.getInetAddress().getHostAddress().getBytes();
-            System.out.println(clientSocket.getInetAddress().getHostAddress());
+            byte[] sBytes = getClientIPAddress(clientSocket).getBytes();
 
             ByteBuffer bb = ByteBuffer.wrap(contentToSend);
             bb.putInt(0, sBytes.length);
@@ -170,6 +169,7 @@ public class MainDispatcher {
     }
 
     private static String getClientIPAddress(Socket cliSocket) {
+        System.out.println("1:" + cliSocket.getInetAddress().toString());
         return cliSocket.getInetAddress().getHostAddress();
     }
 

@@ -5,6 +5,8 @@ import javax.net.ssl.*;
 import client.responseModels.AccessResponseModel;
 import client.responseModels.LoginResponseModel;
 import utils.*;
+
+import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
@@ -93,6 +95,7 @@ public class Client {
     }
 
     public static void main(String[] args) throws Exception {
+        System.out.println(InetAddress.getLocalHost().getHostAddress());
 
         if (args.length < 1) {
             System.out.println("Provide a client name.");
