@@ -1,5 +1,7 @@
 version: '3'
 
+# IF CHANGES ARE MADE IN THIS FILE PLEASE MAKE SURE THAT THE
+# COMPILATION .SH SCRIPT IS NOT COMPROMISED
 services:
   main_dispatcher:
     build: .
@@ -17,7 +19,7 @@ services:
     command: ["java" ,"-cp" ,"out:jars/sqlite-jdbc-3.44.0.0.jar:jars/slf4j-api-1.7.36.jar", "servers.AuthenticationServer.ASServer"]
     volumes:
       - ./certs/asCrypto:/app/certs/asCrypto
-      - ./jars:/app/jars
+      - ./src/jars:/app/jars
       - ./configs/auth_server.conf:/app/configs/auth_server.conf
   access_control:
     build: .
@@ -27,7 +29,7 @@ services:
     command: ["java" ,"-cp" ,"out:jars/sqlite-jdbc-3.44.0.0.jar:jars/slf4j-api-1.7.36.jar", "servers.AccessControlServer.ACServer"]
     volumes:
       - ./certs/acCrypto:/app/certs/acCrypto
-      - ./jars:/app/jars
+      - ./src/jars:/app/jars
       - ./configs/access_control_server.conf:/app/configs/access_control_server.conf
   storage_service:
     build: .
