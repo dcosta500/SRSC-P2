@@ -1,19 +1,23 @@
 version: '3'
-
 services:
-    maindispatcher:
-        image: main_dispatcher
+
+    main_dispatcher:
+        build: .
         ports:
           - "8080:8080"
+        command: ["java" ,"-cp" ,"out", "servers.MainDispatcher.MainDispatcherServer"]
     authentication:
-      image: authentication_server
-      ports:
-        - "8081:8081"
-    accesscontrol:
-      image: access_control
-      ports:
-        - "8082:8082"
-    storageservice:
-      image: storage_service
-      ports:
-        - "8083:8083"
+        build: .
+        ports:
+          - "8081:8081"
+        command: ["java" ,"-cp" ,"out:src/jar/sqlite-jdbc-3.44.0.0.jar:src/jar/slf4j-api-1.7.36.jar", "servers.AuthenticationServer.ASServer"]
+    access_control:
+        build: .
+        ports:
+          - "8082:8082"
+        command: ["java" ,"-cp" ,"out:src/jar/sqlite-jdbc-3.44.0.0.jar:src/jar/slf4j-api-1.7.36.jar", "servers.AccessControlServer.ACServer"]
+    storage_service:
+        build: .
+        ports:
+          - "8083:8083"
+        command: ["java" ,"-cp" ,"out", "servers.StorageSystemService.SSServer"]

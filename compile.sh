@@ -16,13 +16,6 @@ javac -d out ./src/utils/* ./src/servers/StorageSystemService/*
 
 echo "Project Compiled."
 
-docker build -t main_dispatcher -f Dockerfile .
-docker build -t authentication_server -f Dockerfile1 .
-docker build -t access_control -f Dockerfile2 .
-docker build -t storage_service -f Dockerfile3 .
-
-echo "Docker image deployed"
-
 docker-compose up -d
 
 echo "Dockers deployed"

@@ -16,8 +16,8 @@ import static utils.CommonValues.SS_HOSTNAME;
 
 public class SSServer {
 
-    private static final String SERVER_TRUSTSTORE_PATH = "certs/asCrypto/ss_truststore";
-    private static final String SERVER_KEYSTORE_PATH = "certs/asCrypto/keystore_ss.jks";
+    private static final String SERVER_TRUSTSTORE_PATH = "certs/ssCrypto/ss_truststore";
+    private static final String SERVER_KEYSTORE_PATH = "certs/ssCrypto/keystore_ss.jks";
     private static final String PASSWORD = "ss123456";
     private static final boolean DO_CLIENT_AUTH = true;
 
