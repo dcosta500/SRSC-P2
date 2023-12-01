@@ -3,6 +3,7 @@ version: '3'
 services:
   main_dispatcher:
     build: .
+    image: main_dispatcher:srsc_p2
     ports:
       - "8080:8080"
     command: ["java" ,"-cp" ,"out", "servers.MainDispatcher.MainDispatcherServer"]
@@ -10,6 +11,7 @@ services:
       - ./certs/mdCrypto:/app/certs/mdCrypto
   authentication:
     build: .
+    image: auth_server:srsc_p2
     ports:
       - "8081:8081"
     command: ["java" ,"-cp" ,"out:jars/sqlite-jdbc-3.44.0.0.jar:jars/slf4j-api-1.7.36.jar", "servers.AuthenticationServer.ASServer"]
@@ -19,6 +21,7 @@ services:
       - ./configs/auth_server.conf:/app/configs/auth_server.conf
   access_control:
     build: .
+    image: access_control:srsc_p2
     ports:
       - "8082:8082"
     command: ["java" ,"-cp" ,"out:jars/sqlite-jdbc-3.44.0.0.jar:jars/slf4j-api-1.7.36.jar", "servers.AccessControlServer.ACServer"]
@@ -28,6 +31,7 @@ services:
       - ./configs/access_control_server.conf:/app/configs/access_control_server.conf
   storage_service:
     build: .
+    image: storage_service:srsc_p2
     ports:
       - "8083:8083"
     command: ["java" ,"-cp" ,"out", "servers.StorageSystemService.SSServer"]

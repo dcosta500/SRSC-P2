@@ -49,8 +49,6 @@ public class SSServer {
         }.start();
     }
 
-
-
     private static void initConf() {
         Properties props = new Properties();
         String curDir = System.getProperty("user.dir");
