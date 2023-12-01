@@ -18,11 +18,54 @@ import javax.net.ServerSocketFactory;
 
 public abstract class MySSLUtils {
     // ===== Factories and Connections =====
+
+
+    /**
+     * Create a Server Socket Factory
+     * @param keystorePath the keystore path
+     * @param password keystore password
+     * @return Server Socket factory
+     */
     public static ServerSocketFactory createServerSocketFactory(String keystorePath, String password) {
         SSLServerSocketFactory ssf = null;
         try {
             // Set up key manager to do server authentication
-            SSLContext ctx;
+            SSLContext ctx = configSocketFactory(keystorePath,password);
+            System.setProperty("KEYSTORE_PATH", keystorePath);
+            ssf = ctx.getServerSocketFactory();
+            return ssf;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return SSLServerSocketFactory.getDefault();
+        }
+    }
+    /**
+     * Create a Client Socket Factory
+     * @param clientKeystorePath the client keystore path
+     * @param password keystore password
+     * @return Client Socket factory
+     */
+    public static SSLSocketFactory createClientSocketFactory(String clientKeystorePath, String password) {
+        try {
+            // set up key manager to do server authentication
+            SSLContext ctx = configSocketFactory(clientKeystorePath,password);
+            return ctx.getSocketFactory();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Config the SSLContext
+     * @param keystorePath the keystore path
+     * @param password the keystore password
+     * @return the SSLContext
+     */
+    private static SSLContext configSocketFactory(String keystorePath, String password){
+        SSLContext ctx;
+        try{
+            // Set up key manager to do server authenticatio
+
             KeyManagerFactory kmf;
             KeyStore ks;
 
@@ -39,41 +82,22 @@ public abstract class MySSLUtils {
             // thus there is no need to add it here)
             ctx = SSLContext.getInstance("TLS");
             ctx.init(kmf.getKeyManagers(), null, null);
-
-            ssf = ctx.getServerSocketFactory();
-            return ssf;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return SSLServerSocketFactory.getDefault();
-        }
+    } catch (Exception e) {
+        e.printStackTrace();
+        return null;
+    }
+        return ctx;
     }
 
-    public static SSLSocketFactory createClientSocketFactory(String clientKeystorePath, String password) {
-        try {
-            // set up key manager to do server authentication
-            SSLContext ctx;
-            KeyManagerFactory kmf;
-            KeyStore ks;
 
-            // Keystore
-            ks = KeyStore.getInstance("JKS");
-            ks.load(new FileInputStream(clientKeystorePath), password.toCharArray());
-
-            // Key Manager Factory
-            kmf = KeyManagerFactory.getInstance("SunX509");
-            kmf.init(ks, password.toCharArray());
-
-            // Create SLL Context (truststore is added through the java run command
-            // thus there is no need to add it here)
-            ctx = SSLContext.getInstance("TLS");
-            ctx.init(kmf.getKeyManagers(), null, null);
-
-            return ctx.getSocketFactory();
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
+    /**
+     * Creates a Server Socket
+      * @param portNumber the port
+     * @param serverKeystorePath the keystore path
+     * @param password the keystore password
+     * @param doClientAuth flag do client auth
+     * @return the server socket
+     */
     public static ServerSocket createServerSocket(int portNumber, String serverKeystorePath, String password,
             boolean doClientAuth) {
         try {
@@ -92,6 +116,13 @@ public abstract class MySSLUtils {
         return null;
     }
 
+    /**
+     * Start new connection to server
+     * @param factory the socket factory
+     * @param hostname the server hostname
+     * @param portNumber the server port
+     * @return the socket
+     */
     public static SSLSocket startNewConnectionToServer(SSLSocketFactory factory, String hostname, int portNumber) {
         try {
             SSLSocket socket = (SSLSocket) factory.createSocket(hostname, portNumber);
@@ -104,6 +135,10 @@ public abstract class MySSLUtils {
         return null;
     }
 
+    /**
+     * Close socket connection
+     * @param socket the socket
+     */
     public static void closeConnectionToServer(Socket socket) {
         try {
             socket.close();
@@ -114,6 +149,13 @@ public abstract class MySSLUtils {
     }
 
     // ===== Data Methods =====
+
+    /**
+     * Build package from command and content
+     * @param command the command
+     * @param content the content
+     * @return the package
+     */
     public static byte[] buildPackage(Command command, byte[] content) {
         // { Command(int) | Length(int) | Content(byte[])}
         byte[] data = new byte[CommonValues.DATA_SIZE];
@@ -126,6 +168,12 @@ public abstract class MySSLUtils {
         return data;
     }
 
+    /**
+     * Build a response package
+     * @param errorCode the error code
+     * @param content the content
+     * @return the response package
+     */
     public static byte[] buildResponse(int errorCode, byte[] content) {
         byte[] data = new byte[CommonValues.DATA_SIZE];
         ByteBuffer bb = ByteBuffer.wrap(data);
@@ -137,6 +185,10 @@ public abstract class MySSLUtils {
         return data;
     }
 
+    /**
+     * Build error response
+     * @return return error response package
+     */
     public static byte[] buildErrorResponse() {
         byte[] data = new byte[CommonValues.DATA_SIZE];
         ByteBuffer bb = ByteBuffer.wrap(data);
@@ -148,6 +200,11 @@ public abstract class MySSLUtils {
         return data;
     }
 
+    /**
+     * Send content to socket
+     * @param socket the socket
+     * @param data the data to be sent
+     */
     public static void sendData(Socket socket, byte[] data) {
         try {
             OutputStream out = socket.getOutputStream();
@@ -159,6 +216,11 @@ public abstract class MySSLUtils {
         }
     }
 
+    /**
+     * Receive data in socket
+     * @param socket the socket
+     * @return the data received in the socket
+     */
     public static byte[] receiveData(Socket socket) {
         try {
             InputStream inputStream = socket.getInputStream();
@@ -173,6 +235,12 @@ public abstract class MySSLUtils {
         return new byte[0];
     }
 
+    /**
+     * Reads content type {Content.size + Content}
+     * @param bb the bytebuffer
+     * @param curIdx the start position of insertion
+     * @return the content
+     */
     public static byte[] getNextBytes(ByteBuffer bb, int curIdx) {
         int length = bb.getInt(curIdx);
         curIdx += Integer.BYTES;
@@ -184,11 +252,25 @@ public abstract class MySSLUtils {
         return array;
     }
 
+    /**
+     * Insert bytes in Byte buffer
+     * @param bb the byte buffer
+     * @param array the content to be inserted
+     * @param curIdx the start position to insert
+     * @return the end position of the insert
+     */
     public static int putBytes(ByteBuffer bb, byte[] array, int curIdx) {
         bb.put(curIdx, array);
         return curIdx + array.length;
     }
 
+    /**
+     * Inserts content type {Content.size + Content}
+     * @param bb the bytebuffer
+     * @param array the content to be inserted
+     * @param curIdx the start position of insertion
+     * @return the end position of the insert
+     */
     public static int putLengthAndBytes(ByteBuffer bb, byte[] array, int curIdx) {
         bb.putInt(curIdx, array.length);
         curIdx += Integer.BYTES;
@@ -200,6 +282,11 @@ public abstract class MySSLUtils {
     }
 
     // ===== Debug Methods =====
+    /**
+     * Appends logs to file
+     * @param author the class or author of the log
+     * @param message the log
+     */
     public static void printToLogFile(String author, String message) {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter("./log.txt", true))) {
             // Write the line to the file
