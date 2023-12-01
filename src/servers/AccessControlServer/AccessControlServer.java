@@ -122,7 +122,6 @@ public class AccessControlServer {
 
     // ===== AUX METHODS =====
     private static boolean checkClientAuthenticatorValidity(String ipClient_rc,String ipClient_auth,String idClient_auth,String idClient_token) {
-        MySSLUtils.printToLogFile("AccessControl",ipClient_rc+ " " + ipClient_auth +" " + idClient_auth + " " + idClient_token);
         System.out.println(ipClient_rc+ " " + ipClient_auth +" " + idClient_auth + " " + idClient_token);
         return ipClient_rc.equals(ipClient_auth) && idClient_auth.equals(idClient_token);
     }

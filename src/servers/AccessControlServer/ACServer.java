@@ -7,11 +7,14 @@ import utils.SQL;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
+
+import static utils.CommonValues.AC_HOSTNAME;
 
 public class ACServer {
 
@@ -100,7 +103,7 @@ public class ACServer {
         initConf();
 
         ServerSocket ss = MySSLUtils.createServerSocket(CommonValues.AC_PORT_NUMBER, SERVER_KEYSTORE_PATH, PASSWORD,
-                DO_CLIENT_AUTH);
+                DO_CLIENT_AUTH, InetAddress.getByName(AC_HOSTNAME));
 
         while (true) {
             Socket socket;

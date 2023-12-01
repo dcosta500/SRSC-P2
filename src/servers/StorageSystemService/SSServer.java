@@ -1,6 +1,8 @@
-package servers.AuthenticationServer;
+package servers.StorageSystemService;
 
-import utils.*;
+import servers.AuthenticationServer.DataPackage;
+import utils.CommonValues;
+import utils.MySSLUtils;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -9,22 +11,19 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Properties;
 
-import static utils.CommonValues.AS_HOSTNAME;
+import static utils.CommonValues.SS_HOSTNAME;
 
-public class ASServer {
-    private static final String[] usernames = { "alice", "bob", "carol", "david", "eric" };
+public class SSServer {
 
-    private static final String SERVER_TRUSTSTORE_PATH = "certs/asCrypto/as_truststore";
-    private static final String SERVER_KEYSTORE_PATH = "certs/asCrypto/keystore_as.jks";
-    private static final String PASSWORD = "as123456";
+    private static final String SERVER_TRUSTSTORE_PATH = "certs/asCrypto/ss_truststore";
+    private static final String SERVER_KEYSTORE_PATH = "certs/asCrypto/keystore_ss.jks";
+    private static final String PASSWORD = "ss123456";
     private static final boolean DO_CLIENT_AUTH = true;
-
-    private static SQL users;
 
     private static byte[] executeCommand(Socket socket, DataPackage dp) {
         switch (dp.getCommand()) {
-            case LOGIN:
-                return AuthenticationServer.login(socket, users, dp.getContent());
+            case STORAGE:
+                return StorageServiceServer.storage(socket,dp.getContent());
             default:
                 return new byte[0];
         }
@@ -49,43 +48,26 @@ public class ASServer {
         }.start();
     }
 
-    private static void initDb() {
-        try {
-            Class.forName("org.sqlite.JDBC");
 
-            users = new AuthUsersSQL("users","auth.db");
-
-            for (String uname : usernames) {
-                String hPwd = CryptoStuff.hashB64(uname + "123456");
-                users.insert(uname, uname + "@mail.com", hPwd, true);
-            }
-
-        } catch (Exception e) {
-            System.out.println("Error while trying to initialize database.");
-            e.printStackTrace();
-        }
-    }
 
     private static void initConf() {
         Properties props = new Properties();
         String curDir = System.getProperty("user.dir");
-        try (FileInputStream input = new FileInputStream(curDir + "/src/configs/auth_server.conf")) {
+        try (FileInputStream input = new FileInputStream(curDir + "/src/configs/storage_server.conf")) {
             props.load(input);
-            System.setProperty("SYM_KEY_AUTH_AC", props.getProperty("SYM_KEY_AUTH_AC"));
+            System.setProperty("SYM_KEY_AC_SS", props.getProperty("SYM_KEY_AC_SS"));
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
-
     public static void main(String[] args) throws Exception {
 
         System.setProperty("javax.net.ssl.trustStore", SERVER_TRUSTSTORE_PATH);
 
         initConf();
-        initDb();
 
-        ServerSocket ss = MySSLUtils.createServerSocket(CommonValues.AS_PORT_NUMBER, SERVER_KEYSTORE_PATH, PASSWORD,
-                DO_CLIENT_AUTH, InetAddress.getByName(AS_HOSTNAME));
+        ServerSocket ss = MySSLUtils.createServerSocket(CommonValues.SS_PORT_NUMBER, SERVER_KEYSTORE_PATH, PASSWORD,
+                DO_CLIENT_AUTH, InetAddress.getByName(SS_HOSTNAME));
 
         while (true) {
             Socket socket;

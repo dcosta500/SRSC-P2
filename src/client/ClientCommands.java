@@ -96,7 +96,7 @@ public abstract class ClientCommands {
         // Send-1 -> { len+uid }
         String[] cmdArgs = cmd.split(" ");
         String uid = cmdArgs[1];
-        String pwd = cmdArgs[2];
+        String hash = CryptoStuff.hashB64(cmdArgs[2]);
 
         byte[] uidBytes = uid.getBytes();
 
@@ -141,7 +141,6 @@ public abstract class ClientCommands {
 
         byte[] pubKeyClientBytes_R1 = kp.getPublic().getEncoded();
 
-        String hash = CryptoStuff.hashB64(pwd);
         Key pbeKey_R1 = CryptoStuff.pbeCreateKeyFromPassword(hash);
         byte[] srEncryptedBytes_R1 = CryptoStuff.pbeEncrypt(pbeKey_R1, srBytes_r1);
 
@@ -276,7 +275,7 @@ public abstract class ClientCommands {
 
 
         if (rp.getCode() == CommonValues.ERROR_CODE) {
-            System.out.println("Could not do login (2)");
+            System.out.println("Could not do access");
             return null;
         }
 
@@ -305,9 +304,7 @@ public abstract class ClientCommands {
         try {
             long nounce = CryptoStuff.getRandom();
             byte[] uid_bytes = uid.getBytes();
-            /*System.out.println(InetAddress.getLocalHost().getHostAddress());
-            System.out.println(socket.getInetAddress().getHostAddress());*/
-            byte[] client_ip = socket.getInetAddress().getHostAddress().getBytes();
+            byte[] client_ip = socket.getLocalAddress().getHostAddress().getBytes();
             byte[] instant_bytes = Instant.now().toString().getBytes();
 
             byte[] auth_Client = new byte[3 * Integer.BYTES + uid_bytes.length + client_ip.length + instant_bytes.length

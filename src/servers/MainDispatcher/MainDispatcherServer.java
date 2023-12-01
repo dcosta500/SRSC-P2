@@ -3,8 +3,11 @@ package servers.MainDispatcher;
 import utils.*;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+
+import static utils.CommonValues.MD_HOSTNAME;
 
 public class MainDispatcherServer {
 
@@ -19,7 +22,7 @@ public class MainDispatcherServer {
         System.setProperty("javax.net.ssl.trustStore", SERVER_TRUSTSTORE_PATH);
 
         ServerSocket ss = MySSLUtils.createServerSocket(CommonValues.MD_PORT_NUMBER, SERVER_KEYSTORE_PATH, PASSWORD,
-                DO_CLIENT_AUTH);
+                DO_CLIENT_AUTH, InetAddress.getByName(MD_HOSTNAME));
 
         while (true) {
             Socket socket;
