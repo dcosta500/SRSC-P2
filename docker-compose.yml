@@ -6,18 +6,31 @@ services:
     ports:
       - "8080:8080"
     command: ["java" ,"-cp" ,"out", "servers.MainDispatcher.MainDispatcherServer"]
+    volumes:
+      - ./certs/mdCrypto:/app/certs/mdCrypto
   authentication:
     build: .
     ports:
       - "8081:8081"
-    command: ["java" ,"-cp" ,"out:src/jar/sqlite-jdbc-3.44.0.0.jar:src/jar/slf4j-api-1.7.36.jar", "servers.AuthenticationServer.ASServer"]
+    command: ["java" ,"-cp" ,"out:jars/sqlite-jdbc-3.44.0.0.jar:jars/slf4j-api-1.7.36.jar", "servers.AuthenticationServer.ASServer"]
+    volumes:
+      - ./certs/asCrypto:/app/certs/asCrypto
+      - ./jars:/app/jars
+      - ./configs/auth_server.conf:/app/configs/auth_server.conf
   access_control:
     build: .
     ports:
       - "8082:8082"
-    command: ["java" ,"-cp" ,"out:src/jar/sqlite-jdbc-3.44.0.0.jar:src/jar/slf4j-api-1.7.36.jar", "servers.AccessControlServer.ACServer"]
+    command: ["java" ,"-cp" ,"out:jars/sqlite-jdbc-3.44.0.0.jar:jars/slf4j-api-1.7.36.jar", "servers.AccessControlServer.ACServer"]
+    volumes:
+      - ./certs/acCrypto:/app/certs/acCrypto
+      - ./jars:/app/jars
+      - ./configs/access_control_server.conf:/app/configs/access_control_server.conf
   storage_service:
     build: .
     ports:
       - "8083:8083"
     command: ["java" ,"-cp" ,"out", "servers.StorageSystemService.SSServer"]
+    volumes:
+      - ./certs/ssCrypto:/app/certs/ssCrypto
+      - ./configs/storage_server.conf:/app/configs/storage_server.conf

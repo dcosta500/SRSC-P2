@@ -64,13 +64,13 @@ public class ACServer {
 
 
 
-        try (FileInputStream input = new FileInputStream(curDir + "/src/configs/access_control_server.conf")) {
+        try (FileInputStream input = new FileInputStream(curDir + "/configs/access_control_server.conf")) {
             props.load(input);
             System.setProperty("SYM_KEY_AUTH_AC", props.getProperty("SYM_KEY_AUTH_AC"));
         } catch (IOException e) {
             e.printStackTrace();
         }
-        try (FileInputStream input = new FileInputStream(curDir + "/src/configs/access_control_server.conf")) {
+        try (FileInputStream input = new FileInputStream(curDir + "/configs/access_control_server.conf")) {
             props.load(input);
             System.setProperty("SYM_KEY_AC_SS", props.getProperty("SYM_KEY_AC_SS"));
         } catch (IOException e) {

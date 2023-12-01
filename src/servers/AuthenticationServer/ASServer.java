@@ -69,7 +69,7 @@ public class ASServer {
     private static void initConf() {
         Properties props = new Properties();
         String curDir = System.getProperty("user.dir");
-        try (FileInputStream input = new FileInputStream(curDir + "/src/configs/auth_server.conf")) {
+        try (FileInputStream input = new FileInputStream(curDir + "/configs/auth_server.conf")) {
             props.load(input);
             System.setProperty("SYM_KEY_AUTH_AC", props.getProperty("SYM_KEY_AUTH_AC"));
         } catch (IOException e) {

@@ -54,7 +54,7 @@ public class SSServer {
     private static void initConf() {
         Properties props = new Properties();
         String curDir = System.getProperty("user.dir");
-        try (FileInputStream input = new FileInputStream(curDir + "/src/configs/storage_server.conf")) {
+        try (FileInputStream input = new FileInputStream(curDir + "/configs/storage_server.conf")) {
             props.load(input);
             System.setProperty("SYM_KEY_AC_SS", props.getProperty("SYM_KEY_AC_SS"));
         } catch (IOException e) {

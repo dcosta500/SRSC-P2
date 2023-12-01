@@ -11,7 +11,7 @@ public abstract class MySQLiteUtils {
 
     /**
      * Delete old db, and create new file
-     * @param filename 
+     * @param filename file of the db
      * @return Connection to the database
      */
     public static Connection resetFile(String filename) {
@@ -21,8 +21,13 @@ public abstract class MySQLiteUtils {
             Class.forName("org.sqlite.JDBC");
             String curDir = System.getProperty("user.dir");
 
-            File file = new File(String.format("%s/db/%s", curDir, filename));
+            // Create folder if it does not exist
+            File folder = new File(String.format("%s/db", curDir));
+            if(!folder.exists())
+                folder.mkdir();
 
+            // Create file if it does not exist
+            File file = new File(String.format("%s/db/%s", curDir, filename));
             if (file.exists() && file.length() > 0)
                 file.delete();
 

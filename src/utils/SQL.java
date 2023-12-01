@@ -4,8 +4,8 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 
 public abstract class SQL {
-    protected static String TABLE_NAME = "abstract";
-    protected static String DB_FILE_NAME = "abstract.db";
+    protected static String TABLE_NAME;
+    protected static String DB_FILE_NAME;
 
     protected Connection con;
     public SQL( String tableName,String dbFile){

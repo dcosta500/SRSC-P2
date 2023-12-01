@@ -8,7 +8,6 @@ import utils.SQL;
 
 public class AuthUsersSQL extends SQL {
 
-
     public AuthUsersSQL(String tableName, String dbFile) {
         super(tableName,dbFile);
         init();

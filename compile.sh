@@ -1,21 +1,41 @@
+#!/bin/bash
+
 genNewCerts(){
     cd ./certs
-    /bin/bash genCerts.sh
+    sh genCerts.sh
     cd ..
 }
 
-rm log.txt # deletes debug log file
+while getopts ":g" opt; do
+  case $opt in
+    g)
+      genNewCerts
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG"
+      echo "Usage: $0 [-g]"
+      exit 1
+      ;;
+  esac
+done
 
-javac -d out ./src/utils/* ./src/client/responseModels/* ./src/client/Client.java ./src/client/ClientCommands.java
-javac -d out ./src/utils/* ./src/servers/MainDispatcher/*
-javac -d out ./src/utils/* ./src/servers/AuthenticationServer/*
-javac -d out ./src/utils/* ./src/servers/AccessControlServer/*
-javac -d out ./src/utils/* ./src/servers/StorageSystemService/*
+compileJava(){
+  javac -d out ./src/utils/* ./src/client/responseModels/* ./src/client/Client.java ./src/client/ClientCommands.java
+  javac -d out ./src/utils/* ./src/servers/MainDispatcher/*
+  javac -d out ./src/utils/* ./src/servers/AuthenticationServer/*
+  javac -d out ./src/utils/* ./src/servers/AccessControlServer/*
+  javac -d out ./src/utils/* ./src/servers/StorageSystemService/*
 
-# genNewCerts
+  echo "Project Compiled."
+}
 
-echo "Project Compiled."
+buildAndRunDocker(){
+  docker build -t srsc_p2_image -f Dockerfile .
+  echo "Docker image deployed"
 
-docker-compose up -d
+  docker compose -p service_request_network up -d
+  echo "Dockers deployed"
+}
 
-echo "Dockers deployed"
+compileJava
+buildAndRunDocker
