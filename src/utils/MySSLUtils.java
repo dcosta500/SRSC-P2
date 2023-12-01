@@ -8,6 +8,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.ByteBuffer;
@@ -74,10 +75,10 @@ public abstract class MySSLUtils {
     }
 
     public static ServerSocket createServerSocket(int portNumber, String serverKeystorePath, String password,
-            boolean doClientAuth) {
+            boolean doClientAuth, InetAddress hostname) {
         try {
             ServerSocketFactory ssf = MySSLUtils.createServerSocketFactory(serverKeystorePath, password);
-            ServerSocket ss = ssf.createServerSocket(portNumber);
+            ServerSocket ss = ssf.createServerSocket(portNumber,0,hostname);
 
             ((SSLServerSocket) ss).setEnabledProtocols(new String[] { "TLSv1.2" });
             ((SSLServerSocket) ss).setEnabledCipherSuites(new String[] { "TLS_RSA_WITH_AES_128_GCM_SHA256" });

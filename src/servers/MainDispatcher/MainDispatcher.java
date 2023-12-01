@@ -70,6 +70,7 @@ public class MainDispatcher {
         try {
             byte[] contentToSend = new byte[100];
             byte[] sBytes = clientSocket.getInetAddress().getHostAddress().getBytes();
+            System.out.println(clientSocket.getInetAddress().getHostAddress());
 
             ByteBuffer bb = ByteBuffer.wrap(contentToSend);
             bb.putInt(0, sBytes.length);
@@ -157,7 +158,6 @@ public class MainDispatcher {
     // ===== Aux Methods =====
     private static byte[] addClientIPToBeggining(Socket clientSocket, byte[] content) {
         byte[] ipClientBytes = getClientIPAddress(clientSocket).getBytes();
-
         byte[] data = new byte[Integer.BYTES + ipClientBytes.length + content.length];
         ByteBuffer bb = ByteBuffer.wrap(data);
 

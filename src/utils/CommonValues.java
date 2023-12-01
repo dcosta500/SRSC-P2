@@ -1,10 +1,10 @@
 package utils;
 
 public abstract class CommonValues {
-    public static final String MD_HOSTNAME = "localhost";
-    public static final String AS_HOSTNAME = "localhost";
-    public static final String AC_HOSTNAME = "localhost";
-    public static final String SS_HOSTNAME = "localhost";
+    public static final String MD_HOSTNAME = "127.0.0.1";
+    public static final String AS_HOSTNAME = "127.0.0.2";
+    public static final String AC_HOSTNAME = "127.0.0.3";
+    public static final String SS_HOSTNAME = "127.0.0.4";
 
     public static final int CLIENT_PORT_NUMBER = 9000;
     public static final int MD_PORT_NUMBER = 8080;
