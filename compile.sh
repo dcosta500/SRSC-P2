@@ -11,9 +11,9 @@ genNewCerts(){
 
 runClient(){
   if [ "$client_name" != "null" ]; then
-    sleep 1 # Give time for Docker to start
     echo "\v"
-    echo "Running client ${client_name}..."
+    echo "Starting client on ${client_name}'s computer..."
+    sleep 2 # Give time for Docker to start
     sh runC.sh $client_name
   fi
 }
@@ -21,7 +21,8 @@ runClient(){
 compileJava(){
   echo "Compiling project..."
 
-  javac -d out ./src/utils/* ./src/client/responseModels/* ./src/client/Client.java ./src/client/ClientCommands.java
+  javac -d out ./src/utils/* ./src/client/responseModels/* ./src/client/Client.java ./src/client/ClientCommands.java\
+  ./src/client/ClientValidator.java
   javac -d out ./src/utils/* ./src/servers/MainDispatcher/*
   javac -d out ./src/utils/* ./src/servers/AuthenticationServer/*
   javac -d out ./src/utils/* ./src/servers/AccessControlServer/*

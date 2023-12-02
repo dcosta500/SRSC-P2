@@ -26,7 +26,6 @@ import javax.crypto.spec.PBEParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 public abstract class CryptoStuff {
-
     // ===== Current settings =====
     private static final String SYMMETRIC_ENCRYPTION_CIPHERSUITE = "AES/CTR/NoPadding";
     private static final String SYMMETRIC_ALG = "AES";
@@ -47,6 +46,7 @@ public abstract class CryptoStuff {
     private static final byte[] IV = { (byte) 14, (byte) 7, (byte) 212, (byte) 157, (byte) 18, (byte) 147, (byte) 221,
             (byte) 49, (byte) 152, (byte) 198, (byte) 74, (byte) 52, (byte) 130, (byte) 156, (byte) 225, (byte) 102 };
 
+    // TODO: Ver se conseguimos fazer um salt dinamico para cada user para usar no login (pbe)
     private static final byte[] SALT = { (byte) 14, (byte) 7, (byte) 212, (byte) 157, (byte) 18, (byte) 147, (byte) 221,
             (byte) 49 };
 
@@ -170,8 +170,6 @@ public abstract class CryptoStuff {
     }
 
     // ===== Symmetric Encryption =====
-
-
     /**
      * Parse byte array to key
      * @param symKey the symmetric key as a byte array
@@ -198,8 +196,8 @@ public abstract class CryptoStuff {
     }
 
     /**
-     * Creates a symetric Key
-     * @return random symetric key
+     * Creates a symmetric Key
+     * @return random symmetric key
      */
     public static Key createSymKey() {
         try {
@@ -387,31 +385,4 @@ public abstract class CryptoStuff {
         }
         return null;
     }
-
-    /**
-     * @param path the name of the file where the private key is stored
-     * @return the private key extracted from the file
-     */
-    /* public static PrivateKey parsePrivateKeyFromPemFormat(String path) {
-        try {
-            // Read the content of the .key file
-            String keyFileContent = new String(Files.readAllBytes(Paths.get(path)));
-    
-            // Remove the first and last lines if it's in PEM format
-            keyFileContent = keyFileContent.replaceAll("-----BEGIN PRIVATE KEY-----", "");
-            keyFileContent = keyFileContent.replaceAll("-----END PRIVATE KEY-----", "");
-            keyFileContent = keyFileContent.replaceAll("\n", "");
-            keyFileContent = keyFileContent.trim();
-    
-            // Decode the Base64-encoded key content
-            byte[] keyBytes = Base64.getDecoder().decode(keyFileContent);
-            PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(keyBytes);
-            KeyFactory keyFactory = KeyFactory.getInstance(SIG_ALG);
-            return keyFactory.generatePrivate(keySpec);
-        } catch (Exception e) {
-            System.out.println("Could not parse private key from pem.");
-            e.printStackTrace();
-        }
-        return null;
-    } */
 }

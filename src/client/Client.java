@@ -34,18 +34,14 @@ public class Client {
     private static Key client_ss_key;
 
     private static void readCommands() {
-        /*
+        /* *
          * Instructions to add a new command
          * 1- Create command enum in Command.java
          * 2- Add Command enum to both switches (client and server)
          * 3- Create method in ClientCommands
          * 4- Create command in MainDispatcher class (not MainDispatcherServer class)
-         *
-         * Format of packages to be sent:
-         * { Command(int) | Length of Content(int) | Content(byte[]) }
-         *
-         * Format of packages being received:
-         * { Error Code(int) | Length of Content(int) | Content(byte[]) }
+         * 5- Create command in respective server
+         * 6- Create in this class a method and the postProcessing for that command
          */
 
         // TODO: Add exit and help instructions. Add support for unknown instruction
@@ -56,7 +52,6 @@ public class Client {
             // TODO: Maybe we should only open the socket if the command exists.
             socket = MySSLUtils.startNewConnectionToServer(factory, CommonValues.MD_HOSTNAME,
                     CommonValues.MD_PORT_NUMBER);
-            System.out.println();
             System.out.print(USERNAME_LOGGED + "Command -> ");
             String cmd = in.nextLine();
             switch (Command.valueOf(cmd.split(" ")[0].toUpperCase())) {
@@ -70,23 +65,34 @@ public class Client {
                     ClientCommands.stats(socket);
                     break;
                 case LOGIN:
-                    LoginResponseModel lrm = ClientCommands.login(socket, cmd);
-                    processLoginResponse(lrm);
+                    login(cmd);
                     break;
                 case ACCESS:
-                    if(auth_ktoken1024 == null || auth_ktoken1024.length == 0){
-                        System.out.println("You haven't logged in yet.");
-                        break;
-                    }
-                    AccessResponseModel arm = ClientCommands.access(socket, auth_ktoken1024, client_ac_key, uid, cmd);
-                    processAccessControlResponse(arm);
+                    access(cmd);
                     break;
                 default:
                     break masterLoop;
             }
             MySSLUtils.closeConnectionToServer(socket);
+            System.out.println();
         }
 
+    }
+
+    private static void login(String cmd){
+        if (!ClientValidator.loginValidator(cmd)){
+            System.out.println("Command is not correctly formatted");
+            return;
+        }
+
+        String name = cmd.split(" ")[1];
+        if(!name.equals(uid)){
+            System.out.printf("This is not %s's computer.\n", name);
+            return;
+        }
+
+        LoginResponseModel lrm = ClientCommands.login(socket, cmd);
+        processLoginResponse(lrm);
     }
 
     private static void processLoginResponse(LoginResponseModel lrm) {
@@ -100,19 +106,32 @@ public class Client {
         client_ac_key = lrm.clientAc_SymKey;
     }
 
+    private static void access(String cmd){
+        if (!ClientValidator.accessValidator(cmd)){
+            System.out.println("Command is not correctly formatted");
+            return;
+        }
+
+        if (auth_ktoken1024 == null || auth_ktoken1024.length == 0) {
+            System.out.println("You haven't logged in yet.");
+            return;
+        }
+
+        AccessResponseModel arm = ClientCommands.access(socket, auth_ktoken1024, client_ac_key, uid, cmd);
+        processAccessControlResponse(arm);
+    }
+
     private static void processAccessControlResponse(AccessResponseModel arm) {
         if (arm == null) {
             return;
         }
 
         control_vtoken1024 = arm.kvtoken1024;
-        System.out.println("Access Control granted successfuly done at: " + arm.timestampFinal.toString());
+        System.out.println("Access Control granted successfully done at: " + arm.timestampFinal.toString());
         client_ss_key = arm.clientService_key;
     }
 
-    public static void main(String[] args) throws Exception {
-        //System.out.println(InetAddress.getLocalHost().getHostAddress());
-
+    public static void main(String[] args) {
         System.out.println(CLIENT_BOOT_MESSAGE);
 
         if (args.length < 1) {
@@ -121,10 +140,9 @@ public class Client {
         }
 
         uid = args[0];
-
-        String client_keystore_path = String.format("certs/clients/%sCrypto/keystore_%s_cl.jks", args[0], args[0]);
+        String client_keystore_path = String.format("certs/clients/%sCrypto/keystore_%s_cl.jks", uid, uid);
         System.setProperty("javax.net.ssl.trustStore",
-                String.format("certs/clients/%sCrypto/%s_cl_truststore", args[0], args[0]));
+                String.format("certs/clients/%sCrypto/%s_cl_truststore", uid, uid));
 
         try {
             factory = MySSLUtils.createClientSocketFactory(client_keystore_path, PASSWORD);
