@@ -12,17 +12,18 @@ import java.util.Scanner;
 public class Client {
     private static final String CLIENT_BOOT_MESSAGE =
             "   _____  _  _               _   \n" +
-            "  / ____|| |(_)             | |  \n" +
-            " | |     | | _   ___  _ __  | |_ \n" +
-            " | |     | || | / _ \\| '_ \\ | __|\n" +
-            " | |____ | || ||  __/| | | || |_ \n" +
-            "  \\_____||_||_| \\___||_| |_| \\__|\n" +
-            "                                 \n" +
-            "                                 ";
+                    "  / ____|| |(_)             | |  \n" +
+                    " | |     | | _   ___  _ __  | |_ \n" +
+                    " | |     | || | / _ \\| '_ \\ | __|\n" +
+                    " | |____ | || ||  __/| | | || |_ \n" +
+                    "  \\_____||_||_| \\___||_| |_| \\__|\n" +
+                    "                                 \n" +
+                    "                                 ";
     private static String uid;
 
     private static SSLSocketFactory factory;
     private static SSLSocket socket;
+    private static String USERNAME_LOGGED = "";
     private static final String PASSWORD = "cl123456";
 
     private static byte[] auth_ktoken1024;
@@ -39,20 +40,24 @@ public class Client {
          * 2- Add Command enum to both switches (client and server)
          * 3- Create method in ClientCommands
          * 4- Create command in MainDispatcher class (not MainDispatcherServer class)
-         * 
+         *
          * Format of packages to be sent:
          * { Command(int) | Length of Content(int) | Content(byte[]) }
-         * 
+         *
          * Format of packages being received:
          * { Error Code(int) | Length of Content(int) | Content(byte[]) }
          */
 
-        // TODO: Add exit and help instructions
+        // TODO: Add exit and help instructions. Add support for unknown instruction
         Scanner in = new Scanner(System.in);
+
+        masterLoop:
         while (true) {
+            // TODO: Maybe we should only open the socket if the command exists.
             socket = MySSLUtils.startNewConnectionToServer(factory, CommonValues.MD_HOSTNAME,
                     CommonValues.MD_PORT_NUMBER);
-            System.out.print("Command -> ");
+            System.out.println();
+            System.out.print(USERNAME_LOGGED + "Command -> ");
             String cmd = in.nextLine();
             switch (Command.valueOf(cmd.split(" ")[0].toUpperCase())) {
                 case SUM:
@@ -69,10 +74,15 @@ public class Client {
                     processLoginResponse(lrm);
                     break;
                 case ACCESS:
+                    if(auth_ktoken1024 == null || auth_ktoken1024.length == 0){
+                        System.out.println("You haven't logged in yet.");
+                        break;
+                    }
                     AccessResponseModel arm = ClientCommands.access(socket, auth_ktoken1024, client_ac_key, uid, cmd);
                     processAccessControlResponse(arm);
                     break;
                 default:
+                    break masterLoop;
             }
             MySSLUtils.closeConnectionToServer(socket);
         }
@@ -84,8 +94,9 @@ public class Client {
             return;
         }
 
+        USERNAME_LOGGED = lrm.username + ":";
         auth_ktoken1024 = lrm.ktoken1024;
-        System.out.println("Login successfuly done at: " + lrm.timestampFinal.toString());
+        System.out.println("Login successfully done at: " + lrm.timestampFinal.toString());
         client_ac_key = lrm.clientAc_SymKey;
     }
 

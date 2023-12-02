@@ -11,6 +11,7 @@ genNewCerts(){
 
 runClient(){
   if [ "$client_name" != "null" ]; then
+    sleep 1 # Give time for Docker to start
     echo "\v"
     echo "Running client ${client_name}..."
     sh runC.sh $client_name

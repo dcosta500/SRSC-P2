@@ -76,5 +76,5 @@ proper arguments.
 ## Authors
 - Diogo Costa N.59893
 - Tomás Gabriel N.60722
-- Francisco Vasco N.
-- Tomé Dias N.
+- Francisco Vasco N.61028
+- Tomé Dias N.60719

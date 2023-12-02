@@ -202,7 +202,7 @@ public abstract class ClientCommands {
 
         byte[] key_bytes = MySSLUtils.getNextBytes(bb);
 
-        return LoginResponseModel.parse(ktoken1024, tsf, key_bytes);
+        return LoginResponseModel.parse(uid, ktoken1024, tsf, key_bytes);
     }
 
     public static void stats(SSLSocket socket) {
