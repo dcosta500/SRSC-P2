@@ -9,7 +9,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Properties;
 
-import static utils.CommonValues.AS_HOSTNAME;
 
 public class ASServer {
     private static final String[] usernames = { "alice", "bob", "carol", "david", "eric" };
@@ -92,6 +91,7 @@ public class ASServer {
             Socket socket;
             try {
                 System.out.println("Waiting for connection...");
+                assert ss != null;
                 socket = ss.accept();
                 System.out.println("Accepted a connection.");
             } catch (IOException e) {

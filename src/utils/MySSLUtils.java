@@ -8,7 +8,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.ByteBuffer;
@@ -32,6 +31,7 @@ public abstract class MySSLUtils {
             // Set up key manager to do server authentication
             SSLContext ctx = configSocketFactory(keystorePath,password);
             System.setProperty("KEYSTORE_PATH", keystorePath);
+            assert ctx != null;
             ssf = ctx.getServerSocketFactory();
             return ssf;
         } catch (Exception e) {
@@ -49,6 +49,7 @@ public abstract class MySSLUtils {
         try {
             // set up key manager to do server authentication
             SSLContext ctx = configSocketFactory(clientKeystorePath,password);
+            assert ctx != null;
             return ctx.getSocketFactory();
         } catch (Exception e) {
             return null;
@@ -226,7 +227,7 @@ public abstract class MySSLUtils {
             InputStream inputStream = socket.getInputStream();
             byte[] buffer = new byte[CommonValues.DATA_SIZE];
             int bytesRead = inputStream.read(buffer, 0, buffer.length);
-            //System.out.println("Bytes Read: " + bytesRead);
+            if(bytesRead==0) return new byte[0];
             return buffer;
         } catch (Exception e) {
             System.out.println("Error receiving data.");
@@ -253,7 +254,6 @@ public abstract class MySSLUtils {
      * Insert bytes in Byte buffer
      * @param bb the byte buffer
      * @param array the content to be inserted
-     * @return the end position of the insert
      */
     public static void putBytes(ByteBuffer bb, byte[] array) {
         bb.put(array);
@@ -263,7 +263,6 @@ public abstract class MySSLUtils {
      * Inserts content type {Content.size + Content}
      * @param bb the bytebuffer
      * @param array the content to be inserted
-     * @return the end position of the insert
      */
     public static void putLengthAndBytes(ByteBuffer bb, byte[] array) {
         bb.putInt(array.length);

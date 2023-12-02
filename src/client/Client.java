@@ -6,11 +6,7 @@ import client.responseModels.AccessResponseModel;
 import client.responseModels.LoginResponseModel;
 import utils.*;
 
-import java.net.InetAddress;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.security.Key;
-import java.sql.SQLOutput;
 import java.util.Scanner;
 
 public class Client {

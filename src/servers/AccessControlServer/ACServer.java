@@ -14,7 +14,6 @@ import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
 
-import static utils.CommonValues.AC_HOSTNAME;
 
 public class ACServer {
 
@@ -109,6 +108,7 @@ public class ACServer {
             Socket socket;
             try {
                 System.out.println("Waiting for connection...");
+                assert ss != null;
                 socket = ss.accept();
                 System.out.println("Accepted a connection.");
             } catch (IOException e) {

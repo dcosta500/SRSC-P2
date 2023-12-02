@@ -1,6 +1,5 @@
 package client;
 
-import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
@@ -131,6 +130,7 @@ public abstract class ClientCommands {
 
         // Process
         KeyPair kp = CryptoStuff.dhGenerateKeyPair();
+        assert kp != null;
         byte[] dhSecret = CryptoStuff.dhGenerateSharedSecret(kp.getPrivate(), serverPublicKeyDHBytesR1);
         Key dhKey = CryptoStuff.dhCreateKeyFromSharedSecret(dhSecret);
 
@@ -238,7 +238,7 @@ public abstract class ClientCommands {
 
         //Creating of Auth Client encrypted with Access control key
         byte[] serviceIDbytes = cmdArgs.split(" ")[1].getBytes();
-        byte[] clientAuthenticator = createClientAuthenticator(uid, client_auth_key,socket);
+        byte[] clientAuthenticator = createClientAuthenticator(uid, client_auth_key);
 
         byte[] dataToSend1 = new byte[Integer.BYTES + serviceIDbytes.length + Integer.BYTES + auth_ktoken1024.length
                 + Integer.BYTES + clientAuthenticator.length];
@@ -274,7 +274,7 @@ public abstract class ClientCommands {
     }
 
     // ===== AUX METHODS =====
-    private static byte[] createClientAuthenticator(String uid, Key client_auth_key,SSLSocket socket) {
+    private static byte[] createClientAuthenticator(String uid, Key client_auth_key) {
         try {
             long nonce = CryptoStuff.getRandom();
             byte[] uid_bytes = uid.getBytes();

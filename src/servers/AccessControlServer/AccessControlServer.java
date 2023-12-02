@@ -10,7 +10,6 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.security.PublicKey;
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.time.Duration;
 import java.time.Instant;

@@ -1,7 +1,5 @@
 package servers.StorageSystemService;
 
-import utils.SQL;
-
 import java.net.Socket;
 
 public class StorageServiceServer {

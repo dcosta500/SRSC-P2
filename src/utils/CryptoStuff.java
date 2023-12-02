@@ -1,8 +1,6 @@
 package utils;
 
 import java.io.FileInputStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.KeyPair;
@@ -14,7 +12,6 @@ import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Signature;
 import java.security.cert.Certificate;
-import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.Random;
@@ -64,7 +61,7 @@ public abstract class CryptoStuff {
 
     /**
      * Generates a random filled byte array
-     * @param Size of byte array
+     * @param nrOfBytes to be generated
      * @return the byte array randomly filled
      */
     public static byte[] generateRandomByteArray(int nrOfBytes) {
@@ -261,8 +258,7 @@ public abstract class CryptoStuff {
     public static Key pbeCreateKeyFromPassword(String password) {
         try {
             SecretKeyFactory skf = SecretKeyFactory.getInstance(PBE_ALG);
-            byte[] salt = IV;
-            PBEKeySpec pks = new PBEKeySpec(password.toCharArray(), salt, ITERATION_COUNT, SYM_KEY_SIZE);
+            PBEKeySpec pks = new PBEKeySpec(password.toCharArray(), IV, ITERATION_COUNT, SYM_KEY_SIZE); //using IV as salt
             return skf.generateSecret(pks);
         } catch (Exception e) {
             System.out.println("Could not create pbe key.");

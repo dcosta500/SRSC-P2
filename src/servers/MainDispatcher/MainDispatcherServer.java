@@ -7,7 +7,6 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-import static utils.CommonValues.MD_HOSTNAME;
 
 public class MainDispatcherServer {
 
@@ -30,6 +29,7 @@ public class MainDispatcherServer {
             Socket socket;
             try {
                 System.out.println("Waiting for connection...");
+                assert ss != null;
                 socket = ss.accept();
                 System.out.println("Accepted a connection.");
             } catch (IOException e) {

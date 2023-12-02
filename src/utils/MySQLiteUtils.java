@@ -32,9 +32,7 @@ public abstract class MySQLiteUtils {
                 file.delete();
 
             String jdbcUrl = String.format("jdbc:sqlite:%s", file.getAbsolutePath());
-            Connection conn = DriverManager.getConnection(jdbcUrl);
-
-            return conn;
+            return DriverManager.getConnection(jdbcUrl);
         } catch (Exception e) {
             System.out.println("SQLite: Could not reset file.");
             e.printStackTrace();
@@ -72,8 +70,7 @@ public abstract class MySQLiteUtils {
             System.out.println(String.format("SELECT %s FROM %s WHERE %s", columns, tableName, condition));
             String query = String.format("SELECT %s FROM %s WHERE %s", columns, tableName, condition);
             PreparedStatement ps = conn.prepareStatement(query);
-            ResultSet rs = ps.executeQuery();
-            return rs;
+            return ps.executeQuery();
         } catch (Exception e) {
             System.out.println("SQLite: Could not execute query.");
             e.printStackTrace();
