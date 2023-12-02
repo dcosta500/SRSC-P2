@@ -185,21 +185,28 @@ public class AccessControlServer {
             System.out.println("Permission denied for user");
             return null;
         }
-
-        byte[] kvTokenDecrypted = new byte[7 * Integer.BYTES + clientSSSymKey_bytes.length + +idClientB.length +
+        //Kvtoken = {  len+uid || len+IpClient || len+IdService|| ||len+TSi || len+TSf || len+Kc,servive  || len+perms || AssAc(token}
+        byte[] kvTokenDecrypted1stPart = new byte[7 * Integer.BYTES + clientSSSymKey_bytes.length + +idClientB.length +
                 ipClientBytes.length + idBytesService.length + tsi.toString().getBytes().length +
                 tsf.toString().getBytes().length + perms.getBytes().length];
 
-        bb = ByteBuffer.wrap(kvTokenDecrypted);
-        MySSLUtils.putLengthAndBytes(bb, clientSSSymKey_bytes);
+        bb = ByteBuffer.wrap(kvTokenDecrypted1stPart);
         MySSLUtils.putLengthAndBytes(bb, idClientB);
         MySSLUtils.putLengthAndBytes(bb, ipClientBytes);
         MySSLUtils.putLengthAndBytes(bb, idBytesService);
         MySSLUtils.putLengthAndBytes(bb, tsi.toString().getBytes());
         MySSLUtils.putLengthAndBytes(bb, tsf.toString().getBytes());
+        MySSLUtils.putLengthAndBytes(bb, clientSSSymKey_bytes);
         MySSLUtils.putLengthAndBytes(bb, perms.getBytes());
 
+
+        byte[] signature = CryptoStuff.sign(CryptoStuff.getPrivateKeyFromKeystore("ac","ac123456"),kvTokenDecrypted1stPart);
+        byte[] fullToken = new byte[2*Integer.BYTES + kvTokenDecrypted1stPart.length + signature.length];
+        bb = ByteBuffer.wrap(fullToken);
+        MySSLUtils.putLengthAndBytes(bb,kvTokenDecrypted1stPart);
+        MySSLUtils.putLengthAndBytes(bb,signature);
+
         return CryptoStuff.symEncrypt(
-                CryptoStuff.parseSymKeyFromBase64(System.getProperty("SYM_KEY_AC_SS")), kvTokenDecrypted);
+                CryptoStuff.parseSymKeyFromBase64(System.getProperty("SYM_KEY_AC_SS")), fullToken);
     }
 }
