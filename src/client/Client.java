@@ -30,7 +30,6 @@ public class Client {
     private static Key client_ac_key;
 
     private static byte[] control_vtoken1024;
-
     private static Key client_ss_key;
 
     private static void readCommands() {
@@ -52,6 +51,7 @@ public class Client {
             // TODO: Maybe we should only open the socket if the command exists.
             socket = MySSLUtils.startNewConnectionToServer(factory, CommonValues.MD_HOSTNAME,
                     CommonValues.MD_PORT_NUMBER);
+
             System.out.print(USERNAME_LOGGED + "Command -> ");
             String cmd = in.nextLine();
             switch (Command.valueOf(cmd.split(" ")[0].toUpperCase())) {
@@ -79,6 +79,7 @@ public class Client {
 
     }
 
+    // ===== COMMAND PROCESSING =====
     private static void login(String cmd){
         if (!ClientValidator.loginValidator(cmd)){
             System.out.println("Command is not correctly formatted");

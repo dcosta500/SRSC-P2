@@ -13,7 +13,6 @@ public class AuthUsersSQL extends SQL {
         init();
     }
 
-
     private void init() {
         con = MySQLiteUtils.resetFile(DB_FILE_NAME);
         MySQLiteUtils.createTable(con, TABLE_NAME,

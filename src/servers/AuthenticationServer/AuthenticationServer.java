@@ -93,11 +93,11 @@ public class AuthenticationServer {
 
         bb = ByteBuffer.wrap(contentR2);
 
+        // len + array
         byte[] ipClientBytesR2 = MySSLUtils.getNextBytes(bb);
         ipClientR2 = new String(ipClientBytesR2, StandardCharsets.UTF_8);
 
         byte[] publicKeyClientBytesR2 = MySSLUtils.getNextBytes(bb);
-
         byte[] cipheredSrR2 = MySSLUtils.getNextBytes(bb);
 
         // Processing

@@ -21,15 +21,16 @@ public abstract class MySSLUtils {
 
     /**
      * Create a Server Socket Factory
+     *
      * @param keystorePath the keystore path
-     * @param password keystore password
+     * @param password     keystore password
      * @return Server Socket factory
      */
     public static ServerSocketFactory createServerSocketFactory(String keystorePath, String password) {
         SSLServerSocketFactory ssf = null;
         try {
             // Set up key manager to do server authentication
-            SSLContext ctx = configSocketFactory(keystorePath,password);
+            SSLContext ctx = configSocketFactory(keystorePath, password);
             System.setProperty("KEYSTORE_PATH", keystorePath);
             assert ctx != null;
             ssf = ctx.getServerSocketFactory();
@@ -39,16 +40,18 @@ public abstract class MySSLUtils {
             return SSLServerSocketFactory.getDefault();
         }
     }
+
     /**
      * Create a Client Socket Factory
+     *
      * @param clientKeystorePath the client keystore path
-     * @param password keystore password
+     * @param password           keystore password
      * @return Client Socket factory
      */
     public static SSLSocketFactory createClientSocketFactory(String clientKeystorePath, String password) {
         try {
             // set up key manager to do server authentication
-            SSLContext ctx = configSocketFactory(clientKeystorePath,password);
+            SSLContext ctx = configSocketFactory(clientKeystorePath, password);
             assert ctx != null;
             return ctx.getSocketFactory();
         } catch (Exception e) {
@@ -58,15 +61,15 @@ public abstract class MySSLUtils {
 
     /**
      * Config the SSLContext
+     *
      * @param keystorePath the keystore path
-     * @param password the keystore password
+     * @param password     the keystore password
      * @return the SSLContext
      */
-    private static SSLContext configSocketFactory(String keystorePath, String password){
+    private static SSLContext configSocketFactory(String keystorePath, String password) {
         SSLContext ctx;
-        try{
-            // Set up key manager to do server authenticatio
-
+        try {
+            // Set up key manager to do server authentication
             KeyManagerFactory kmf;
             KeyStore ks;
 
@@ -83,30 +86,31 @@ public abstract class MySSLUtils {
             // thus there is no need to add it here)
             ctx = SSLContext.getInstance("TLS");
             ctx.init(kmf.getKeyManagers(), null, null);
-    } catch (Exception e) {
-        e.printStackTrace();
-        return null;
-    }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
         return ctx;
     }
 
 
     /**
      * Creates a Server Socket
-      * @param portNumber the port
+     *
+     * @param portNumber         the port
      * @param serverKeystorePath the keystore path
-     * @param password the keystore password
-     * @param doClientAuth flag do client auth
+     * @param password           the keystore password
+     * @param doClientAuth       flag do client auth
      * @return the server socket
      */
     public static ServerSocket createServerSocket(int portNumber, String serverKeystorePath, String password,
-            boolean doClientAuth) {
+                                                  boolean doClientAuth) {
         try {
             ServerSocketFactory ssf = MySSLUtils.createServerSocketFactory(serverKeystorePath, password);
             ServerSocket ss = ssf.createServerSocket(portNumber);
 
-            ((SSLServerSocket) ss).setEnabledProtocols(new String[] { "TLSv1.2" });
-            ((SSLServerSocket) ss).setEnabledCipherSuites(new String[] { "TLS_RSA_WITH_AES_128_GCM_SHA256" });
+            ((SSLServerSocket) ss).setEnabledProtocols(new String[]{"TLSv1.2"});
+            ((SSLServerSocket) ss).setEnabledCipherSuites(new String[]{"TLS_RSA_WITH_AES_128_GCM_SHA256"});
             ((SSLServerSocket) ss).setNeedClientAuth(doClientAuth);
 
             return ss;
@@ -119,8 +123,9 @@ public abstract class MySSLUtils {
 
     /**
      * Start new connection to server
-     * @param factory the socket factory
-     * @param hostname the server hostname
+     *
+     * @param factory    the socket factory
+     * @param hostname   the server hostname
      * @param portNumber the server port
      * @return the socket
      */
@@ -138,6 +143,7 @@ public abstract class MySSLUtils {
 
     /**
      * Close socket connection
+     *
      * @param socket the socket
      */
     public static void closeConnectionToServer(Socket socket) {
@@ -153,6 +159,7 @@ public abstract class MySSLUtils {
 
     /**
      * Build package from command and content
+     *
      * @param command the command
      * @param content the content
      * @return the package
@@ -171,8 +178,9 @@ public abstract class MySSLUtils {
 
     /**
      * Build a response package
+     *
      * @param errorCode the error code
-     * @param content the content
+     * @param content   the content
      * @return the response package
      */
     public static byte[] buildResponse(int errorCode, byte[] content) {
@@ -188,6 +196,7 @@ public abstract class MySSLUtils {
 
     /**
      * Build error response
+     *
      * @return return error response package
      */
     public static byte[] buildErrorResponse() {
@@ -203,8 +212,9 @@ public abstract class MySSLUtils {
 
     /**
      * Send content to socket
+     *
      * @param socket the socket
-     * @param data the data to be sent
+     * @param data   the data to be sent
      */
     public static void sendData(Socket socket, byte[] data) {
         try {
@@ -219,6 +229,7 @@ public abstract class MySSLUtils {
 
     /**
      * Receive data in socket
+     *
      * @param socket the socket
      * @return the data received in the socket
      */
@@ -227,7 +238,7 @@ public abstract class MySSLUtils {
             InputStream inputStream = socket.getInputStream();
             byte[] buffer = new byte[CommonValues.DATA_SIZE];
             int bytesRead = inputStream.read(buffer, 0, buffer.length);
-            if(bytesRead==0) return new byte[0];
+            if (bytesRead == 0) return new byte[0];
             return buffer;
         } catch (Exception e) {
             System.out.println("Error receiving data.");
@@ -238,6 +249,7 @@ public abstract class MySSLUtils {
 
     /**
      * Reads content type {Content.size + Content}
+     *
      * @param bb the bytebuffer
      * @return the content
      */
@@ -252,7 +264,8 @@ public abstract class MySSLUtils {
 
     /**
      * Insert bytes in Byte buffer
-     * @param bb the byte buffer
+     *
+     * @param bb    the byte buffer
      * @param array the content to be inserted
      */
     public static void putBytes(ByteBuffer bb, byte[] array) {
@@ -261,19 +274,21 @@ public abstract class MySSLUtils {
 
     /**
      * Inserts content type {Content.size + Content}
-     * @param bb the bytebuffer
+     *
+     * @param bb    the bytebuffer
      * @param array the content to be inserted
      */
     public static void putLengthAndBytes(ByteBuffer bb, byte[] array) {
         bb.putInt(array.length);
-
         bb.put(array);
     }
 
     // ===== Debug Methods =====
+
     /**
      * Appends logs to file
-     * @param author the class or author of the log
+     *
+     * @param author  the class or author of the log
      * @param message the log
      */
     public static void printToLogFile(String author, String message) {
