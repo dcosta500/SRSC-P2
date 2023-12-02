@@ -37,7 +37,8 @@ used with the requested service.
 ## How to compile and run
 ### Compilation Script
 To compile all the code and put the servers up and running on Docker, use the following 
-command.
+command. This script will stop all container instances, delete their images, compile the
+java code, rebuild the images and launch the containers through Docker Compose.
 
 ```
 sh compile.sh -g
