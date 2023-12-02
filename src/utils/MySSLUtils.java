@@ -238,16 +238,13 @@ public abstract class MySSLUtils {
     /**
      * Reads content type {Content.size + Content}
      * @param bb the bytebuffer
-     * @param curIdx the start position of insertion
      * @return the content
      */
-    public static byte[] getNextBytes(ByteBuffer bb, int curIdx) {
-        int length = bb.getInt(curIdx);
-        curIdx += Integer.BYTES;
+    public static byte[] getNextBytes(ByteBuffer bb) {
+        int length = bb.getInt();
 
         byte[] array = new byte[length];
-        bb.get(curIdx, array);
-        curIdx += array.length;
+        bb.get(array);
 
         return array;
     }
@@ -256,29 +253,22 @@ public abstract class MySSLUtils {
      * Insert bytes in Byte buffer
      * @param bb the byte buffer
      * @param array the content to be inserted
-     * @param curIdx the start position to insert
      * @return the end position of the insert
      */
-    public static int putBytes(ByteBuffer bb, byte[] array, int curIdx) {
-        bb.put(curIdx, array);
-        return curIdx + array.length;
+    public static void putBytes(ByteBuffer bb, byte[] array) {
+        bb.put(array);
     }
 
     /**
      * Inserts content type {Content.size + Content}
      * @param bb the bytebuffer
      * @param array the content to be inserted
-     * @param curIdx the start position of insertion
      * @return the end position of the insert
      */
-    public static int putLengthAndBytes(ByteBuffer bb, byte[] array, int curIdx) {
-        bb.putInt(curIdx, array.length);
-        curIdx += Integer.BYTES;
+    public static void putLengthAndBytes(ByteBuffer bb, byte[] array) {
+        bb.putInt(array.length);
 
-        bb.put(curIdx, array);
-        curIdx += array.length;
-
-        return curIdx;
+        bb.put(array);
     }
 
     // ===== Debug Methods =====

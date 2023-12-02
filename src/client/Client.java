@@ -10,10 +10,19 @@ import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
+import java.sql.SQLOutput;
 import java.util.Scanner;
 
 public class Client {
-
+    private static final String CLIENT_BOOT_MESSAGE =
+            "   _____  _  _               _   \n" +
+            "  / ____|| |(_)             | |  \n" +
+            " | |     | | _   ___  _ __  | |_ \n" +
+            " | |     | || | / _ \\| '_ \\ | __|\n" +
+            " | |____ | || ||  __/| | | || |_ \n" +
+            "  \\_____||_||_| \\___||_| |_| \\__|\n" +
+            "                                 \n" +
+            "                                 ";
     private static String uid;
 
     private static SSLSocketFactory factory;
@@ -42,6 +51,7 @@ public class Client {
          * { Error Code(int) | Length of Content(int) | Content(byte[]) }
          */
 
+        // TODO: Add exit and help instructions
         Scanner in = new Scanner(System.in);
         while (true) {
             socket = MySSLUtils.startNewConnectionToServer(factory, CommonValues.MD_HOSTNAME,
@@ -81,7 +91,6 @@ public class Client {
         auth_ktoken1024 = lrm.ktoken1024;
         System.out.println("Login successfuly done at: " + lrm.timestampFinal.toString());
         client_ac_key = lrm.clientAc_SymKey;
-
     }
 
     private static void processAccessControlResponse(AccessResponseModel arm) {
@@ -95,7 +104,9 @@ public class Client {
     }
 
     public static void main(String[] args) throws Exception {
-        System.out.println(InetAddress.getLocalHost().getHostAddress());
+        //System.out.println(InetAddress.getLocalHost().getHostAddress());
+
+        System.out.println(CLIENT_BOOT_MESSAGE);
 
         if (args.length < 1) {
             System.out.println("Provide a client name.");

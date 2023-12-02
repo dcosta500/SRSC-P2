@@ -1,6 +1,7 @@
 #!/bin/bash
 
 docker_tag=srsc_p2
+client_name="null"
 
 genNewCerts(){
     cd ./certs
@@ -8,26 +9,24 @@ genNewCerts(){
     cd ..
 }
 
-while getopts ":g" opt; do
-  case $opt in
-    g)
-      genNewCerts
-      ;;
-    \?)
-      echo "Invalid option: -$OPTARG"
-      echo "Usage: $0 [-g]"
-      exit 1
-      ;;
-  esac
-done
+runClient(){
+  if [ "$client_name" != "null" ]; then
+    echo "\v"
+    echo "Running client ${client_name}..."
+    sh runC.sh $client_name
+  fi
+}
 
 compileJava(){
+  echo "Compiling project..."
+
   javac -d out ./src/utils/* ./src/client/responseModels/* ./src/client/Client.java ./src/client/ClientCommands.java
   javac -d out ./src/utils/* ./src/servers/MainDispatcher/*
   javac -d out ./src/utils/* ./src/servers/AuthenticationServer/*
   javac -d out ./src/utils/* ./src/servers/AccessControlServer/*
   javac -d out ./src/utils/* ./src/servers/StorageSystemService/*
 
+  # echo -ne "\033[K"
   echo "Project Compiled."
 }
 
@@ -52,6 +51,27 @@ buildAndRunDocker(){
   echo "Dockers deployed"
 }
 
+# Parses command flags (cannot be inside a function)
+while getopts ":gc:" opt; do
+  case $opt in
+    g)
+      genNewCerts
+      ;;
+    c)
+      client_name="$OPTARG"
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      exit 1
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument (client name)." >&2
+      exit 1
+      ;;
+  esac
+done
+
 compileJava
 resetDocker
 buildAndRunDocker
+runClient

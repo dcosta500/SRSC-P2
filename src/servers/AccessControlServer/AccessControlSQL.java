@@ -6,10 +6,6 @@ import utils.SQL;
 
 
 public class AccessControlSQL extends SQL {
-
-
-
-
     public AccessControlSQL(String tableName, String dbFile) {
         super(tableName,dbFile);
         init();
@@ -32,8 +28,6 @@ public class AccessControlSQL extends SQL {
         String values = createValuesString(args[0], args[1], args[2]);
         MySQLiteUtils.update(con, TABLE_NAME, values, condition);
     }
-
-
 
     @Override
     protected String createValuesString(Object... args) {

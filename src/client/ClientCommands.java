@@ -83,7 +83,7 @@ public abstract class ClientCommands {
     }
 
     public static LoginResponseModel login(SSLSocket socket, String cmd) {
-        /**
+        /* *
         * Data flow:
         * Send-1 -> { len+uid }
         * Receive-1 -> { Secure Random (long) || len+Yauth }
@@ -103,8 +103,7 @@ public abstract class ClientCommands {
         byte[] dataToSend1 = new byte[Integer.BYTES + uidBytes.length];
         ByteBuffer bb = ByteBuffer.wrap(dataToSend1);
 
-        int curIdx = 0;
-        curIdx = MySSLUtils.putLengthAndBytes(bb, uidBytes, curIdx);
+        MySSLUtils.putLengthAndBytes(bb, uidBytes);
 
         MySSLUtils.sendData(socket, MySSLUtils.buildPackage(Command.LOGIN, dataToSend1));
 
@@ -124,15 +123,11 @@ public abstract class ClientCommands {
         // Unpack
         byte[] srBytes_r1 = new byte[Long.BYTES];
 
-        curIdx = 0;
-
-        bb.get(curIdx, srBytes_r1);
-        curIdx += srBytes_r1.length;
+        bb.get(srBytes_r1);
 
         long sr_r1 = ByteBuffer.wrap(srBytes_r1).getLong();
 
-        byte[] serverPublicKeyDHBytesR1 = MySSLUtils.getNextBytes(bb, curIdx);
-        curIdx += Integer.BYTES + serverPublicKeyDHBytesR1.length;
+        byte[] serverPublicKeyDHBytesR1 = MySSLUtils.getNextBytes(bb);
 
         // Process
         KeyPair kp = CryptoStuff.dhGenerateKeyPair();
@@ -150,9 +145,8 @@ public abstract class ClientCommands {
         byte[] dataToSend_S2 = new byte[2 * Integer.BYTES + pubKeyClientBytes_R1.length + srEncryptedBytes_R1.length];
         bb = ByteBuffer.wrap(dataToSend_S2);
 
-        curIdx = 0;
-        curIdx = MySSLUtils.putLengthAndBytes(bb, pubKeyClientBytes_R1, curIdx);
-        curIdx = MySSLUtils.putLengthAndBytes(bb, srEncryptedBytes_R1, curIdx);
+        MySSLUtils.putLengthAndBytes(bb, pubKeyClientBytes_R1);
+        MySSLUtils.putLengthAndBytes(bb, srEncryptedBytes_R1);
 
         MySSLUtils.sendData(socket, dataToSend_S2);
 
@@ -171,14 +165,11 @@ public abstract class ClientCommands {
         content = rp.getContent();
         bb = ByteBuffer.wrap(content);
 
-        curIdx = 0;
-        byte[] encryptedBytes_R2 = MySSLUtils.getNextBytes(bb, curIdx);
-        curIdx += Integer.BYTES + encryptedBytes_R2.length;
+        byte[] encryptedBytes_R2 = MySSLUtils.getNextBytes(bb);
 
         byte[] bytes_R2 = CryptoStuff.symDecrypt(dhKey, encryptedBytes_R2);
 
-        byte[] signedBytes_R2 = MySSLUtils.getNextBytes(bb, curIdx);
-        curIdx += Integer.BYTES + signedBytes_R2.length;
+        byte[] signedBytes_R2 = MySSLUtils.getNextBytes(bb);
 
         PublicKey asPublicKey = CryptoStuff.getPublicKeyFromTruststore("as", "cl123456");
 
@@ -190,10 +181,7 @@ public abstract class ClientCommands {
         // Unpack
         bb = ByteBuffer.wrap(bytes_R2);
 
-        curIdx = 0;
-
-        byte[] asId_bytes = MySSLUtils.getNextBytes(bb, curIdx);
-        curIdx += Integer.BYTES + asId_bytes.length;
+        byte[] asId_bytes = MySSLUtils.getNextBytes(bb);
         String asId = new String(asId_bytes, StandardCharsets.UTF_8);
 
         if (!asId.equals("auth")) {
@@ -201,22 +189,18 @@ public abstract class ClientCommands {
             return null;
         }
 
-        byte[] ktoken1024 = MySSLUtils.getNextBytes(bb, curIdx);
-        curIdx += Integer.BYTES + ktoken1024.length;
+        byte[] ktoken1024 = MySSLUtils.getNextBytes(bb);
 
-        byte[] tsf = MySSLUtils.getNextBytes(bb, curIdx);
-        curIdx += Integer.BYTES + tsf.length;
+        byte[] tsf = MySSLUtils.getNextBytes(bb);
 
-        long sr_r2 = bb.getLong(curIdx);
-        curIdx += Long.BYTES;
+        long sr_r2 = bb.getLong();
 
         if (sr_r2 != sr_r1) {
             System.out.println("Secure Randoms do not match.");
             return null;
         }
 
-        byte[] key_bytes = MySSLUtils.getNextBytes(bb, curIdx);
-        curIdx += Integer.BYTES + key_bytes.length;
+        byte[] key_bytes = MySSLUtils.getNextBytes(bb);
 
         return LoginResponseModel.parse(ktoken1024, tsf, key_bytes);
     }
@@ -239,9 +223,9 @@ public abstract class ClientCommands {
     }
 
     public static AccessResponseModel access(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid,
-            String serviceID) {
+            String cmdArgs) {
 
-        /*
+        /* *
          * Data flow:
          * Send-1-> { len+IdService || len+token1024 || len+AuthClient}
          * AuthClient = {len+IdClient || len+ IpClient || len+TS || NOUNCE}Kc,AC
@@ -253,7 +237,7 @@ public abstract class ClientCommands {
         // AuthClient = {len+IdClient || len+ IpClient || len+TS || NOUNCE}Kc,AC
 
         //Creating of Auth Client encrypted with Access control key
-        byte[] serviceIDbytes = serviceID.split(" ")[1].getBytes();
+        byte[] serviceIDbytes = cmdArgs.split(" ")[1].getBytes();
         byte[] clientAuthenticator = createClientAuthenticator(uid, client_auth_key,socket);
 
         byte[] dataToSend1 = new byte[Integer.BYTES + serviceIDbytes.length + Integer.BYTES + auth_ktoken1024.length
@@ -261,10 +245,9 @@ public abstract class ClientCommands {
 
         ByteBuffer bb = ByteBuffer.wrap(dataToSend1);
 
-        int curIdx = 0;
-        curIdx = MySSLUtils.putLengthAndBytes(bb, serviceIDbytes, curIdx);
-        curIdx = MySSLUtils.putLengthAndBytes(bb, auth_ktoken1024, curIdx);
-        curIdx = MySSLUtils.putLengthAndBytes(bb, clientAuthenticator, curIdx);
+        MySSLUtils.putLengthAndBytes(bb, serviceIDbytes);
+        MySSLUtils.putLengthAndBytes(bb, auth_ktoken1024);
+        MySSLUtils.putLengthAndBytes(bb, clientAuthenticator);
 
         MySSLUtils.sendData(socket, MySSLUtils.buildPackage(Command.ACCESS, dataToSend1));
 
@@ -274,28 +257,18 @@ public abstract class ClientCommands {
         byte[] dataToReceive_R1 = MySSLUtils.receiveData(socket);
         ResponsePackage rp = ResponsePackage.parse(dataToReceive_R1);
 
-
         if (rp.getCode() == CommonValues.ERROR_CODE) {
             System.out.println("Could not do access");
             return null;
         }
 
-
         byte[] content = CryptoStuff.symDecrypt(client_auth_key, rp.getContent());
 
         bb = ByteBuffer.wrap(content);
-        curIdx = 0;
-        byte[] key_c_service = MySSLUtils.getNextBytes(bb, curIdx);
-        curIdx += Integer.BYTES + key_c_service.length;
-
-        byte[] serviceId_check = MySSLUtils.getNextBytes(bb, curIdx);
-        curIdx += Integer.BYTES + serviceId_check.length;
-
-        byte[] timestamp_final = MySSLUtils.getNextBytes(bb, curIdx);
-        curIdx += Integer.BYTES + timestamp_final.length;
-
-        byte[] kvToken = MySSLUtils.getNextBytes(bb, curIdx);
-        curIdx += Integer.BYTES + kvToken.length;
+        byte[] key_c_service = MySSLUtils.getNextBytes(bb);
+        byte[] serviceId_check = MySSLUtils.getNextBytes(bb);
+        byte[] timestamp_final = MySSLUtils.getNextBytes(bb);
+        byte[] kvToken = MySSLUtils.getNextBytes(bb);
 
         return AccessResponseModel.parse(key_c_service, serviceId_check, timestamp_final, kvToken);
     }
@@ -303,7 +276,7 @@ public abstract class ClientCommands {
     // ===== AUX METHODS =====
     private static byte[] createClientAuthenticator(String uid, Key client_auth_key,SSLSocket socket) {
         try {
-            long nounce = CryptoStuff.getRandom();
+            long nonce = CryptoStuff.getRandom();
             byte[] uid_bytes = uid.getBytes();
             byte[] instant_bytes = Instant.now().toString().getBytes();
 
@@ -312,10 +285,9 @@ public abstract class ClientCommands {
 
             ByteBuffer bb = ByteBuffer.wrap(auth_Client);
 
-            int curIdx = 0;
-            curIdx = MySSLUtils.putLengthAndBytes(bb, uid_bytes, curIdx);
-            curIdx = MySSLUtils.putLengthAndBytes(bb, instant_bytes, curIdx);
-            bb.putLong(curIdx, nounce);
+            MySSLUtils.putLengthAndBytes(bb, uid_bytes);
+            MySSLUtils.putLengthAndBytes(bb, instant_bytes);
+            bb.putLong(nonce);
 
             return CryptoStuff.symEncrypt(client_auth_key, auth_Client);
         } catch (Exception e) {

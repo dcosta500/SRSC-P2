@@ -160,10 +160,8 @@ public class MainDispatcher {
         byte[] data = new byte[Integer.BYTES + ipClientBytes.length + content.length];
         ByteBuffer bb = ByteBuffer.wrap(data);
 
-        int curIdx = 0;
-
-        curIdx = MySSLUtils.putLengthAndBytes(bb, ipClientBytes, curIdx);
-        curIdx = MySSLUtils.putBytes(bb, content, curIdx);
+        MySSLUtils.putLengthAndBytes(bb, ipClientBytes);
+        MySSLUtils.putBytes(bb, content);
 
         return data;
     }

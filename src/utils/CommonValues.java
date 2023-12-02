@@ -5,8 +5,8 @@ public abstract class CommonValues {
     //Hostname Values
     public static final String MD_HOSTNAME = "localhost";
     public static final String AS_HOSTNAME = "authentication";
-    public static final String AC_HOSTNAME = "accesscontrol";
-    public static final String SS_HOSTNAME = "storageservice";
+    public static final String AC_HOSTNAME = "access_control";
+    public static final String SS_HOSTNAME = "storage_service";
 
 
     // Port values
@@ -25,7 +25,7 @@ public abstract class CommonValues {
     public static final String AUTH_ID = "auth";
     public static final String AC_ID = "access_control";
 
-    public static final String SS_ID = "storage_service";
+    public static final String SS_ID = "storage";
 
     // Time
     public static final int TOKEN_VALIDITY_HOURS = 24;
