@@ -3,6 +3,7 @@ package client;
 import javax.net.ssl.*;
 
 import client.responseModels.LoginResponseModel;
+import client.responseModels.MakedirResponseModel;
 import utils.*;
 
 import java.io.FileInputStream;
