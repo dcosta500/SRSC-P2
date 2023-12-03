@@ -93,7 +93,6 @@ public abstract class MySSLUtils {
         return ctx;
     }
 
-
     /**
      * Creates a Server Socket
      *
@@ -169,9 +168,24 @@ public abstract class MySSLUtils {
         byte[] data = new byte[CommonValues.DATA_SIZE];
         ByteBuffer bb = ByteBuffer.wrap(data);
 
-        bb.putInt(0, command.ordinal());
-        bb.putInt(Integer.BYTES, content.length);
-        bb.put(2 * Integer.BYTES, content);
+        bb.putInt(command.ordinal());
+        MySSLUtils.putLengthAndBytes(bb, content);
+
+        return data;
+    }
+
+    /**
+     * Build package from file.
+     *
+     * @param file File to be sent
+     * @return the package
+     */
+    public static byte[] buildFilePackage(byte[] file) {
+        // { Command(int) | Length(int) | Content(byte[])}
+        byte[] data = new byte[CommonValues.FILE_SIZE];
+        ByteBuffer bb = ByteBuffer.wrap(data);
+
+        MySSLUtils.putLengthAndBytes(bb, file);
 
         return data;
     }
@@ -179,17 +193,16 @@ public abstract class MySSLUtils {
     /**
      * Build a response package
      *
-     * @param errorCode the error code
+     * @param statusCode the status code
      * @param content   the content
      * @return the response package
      */
-    public static byte[] buildResponse(int errorCode, byte[] content) {
+    public static byte[] buildResponse(int statusCode, byte[] content) {
         byte[] data = new byte[CommonValues.DATA_SIZE];
         ByteBuffer bb = ByteBuffer.wrap(data);
 
-        bb.putInt(0, errorCode);
-        bb.putInt(Integer.BYTES, content.length);
-        bb.put(2 * Integer.BYTES, content);
+        bb.putInt(statusCode);
+        MySSLUtils.putLengthAndBytes(bb, content);
 
         return data;
     }
@@ -203,9 +216,8 @@ public abstract class MySSLUtils {
         byte[] data = new byte[CommonValues.DATA_SIZE];
         ByteBuffer bb = ByteBuffer.wrap(data);
 
-        bb.putInt(0, CommonValues.ERROR_CODE);
-        bb.putInt(Integer.BYTES, 0);
-        bb.put(2 * Integer.BYTES, new byte[0]);
+        bb.putInt(CommonValues.ERROR_CODE);
+        MySSLUtils.putLengthAndBytes(bb, new byte[0]);
 
         return data;
     }
@@ -248,6 +260,26 @@ public abstract class MySSLUtils {
     }
 
     /**
+     * Receive file in socket
+     *
+     * @param socket the socket
+     * @return the file received in the socket
+     */
+    public static byte[] receiveFile(Socket socket) {
+        try {
+            InputStream inputStream = socket.getInputStream();
+            byte[] buffer = new byte[CommonValues.FILE_SIZE];
+            int bytesRead = inputStream.read(buffer, 0, buffer.length);
+            if (bytesRead == 0) return new byte[0];
+            return buffer;
+        } catch (Exception e) {
+            System.out.println("Error receiving data.");
+            e.printStackTrace();
+        }
+        return new byte[0];
+    }
+
+    /**
      * Reads content type {Content.size + Content}
      *
      * @param bb the bytebuffer
@@ -278,8 +310,8 @@ public abstract class MySSLUtils {
      * @param bb    the bytebuffer
      * @param arrays the content to be inserted
      */
-    public static void putLengthAndBytes(ByteBuffer bb, byte[]... arrays){
-        for(byte[] array : arrays){
+    public static void putLengthAndBytes(ByteBuffer bb, byte[]... arrays) {
+        for (byte[] array : arrays) {
             bb.putInt(array.length);
             bb.put(array);
         }

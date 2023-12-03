@@ -22,12 +22,16 @@ public class AccessControlServer {
     public static byte[] access(Socket mdSocket, Set<Long> nonceSet, byte[] content, SQL users) {
         /*
          * Data flow:
-         * Receive-1-> { len+ipClient || len+IdServiço || len+Ktoken1024 || len+AuthClient}
-         * AuthClient = { len+IdClient || len+TS || NONCE }Kc,AC
-         * Ktoken1024 = { len+{ len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac } ||
-         *              len+{ len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }SIGauth } Kauth,ac
+         * Receive-1-> { len + ipClient || len + IdServiço || len + Ktoken1024 || len + AuthClient}
          * Send-1 -> { len+KeyC,Serviço || len+IdServiço || len+TSf || len+KvToken }
-         * Kvtoken = { len + { len+uid || len+IpClient || len+IdService|| ||len+TSi || len+TSf || len+Kc,servive  || len+perms } || len + AssAc(token) }Kac,s
+         *
+         * AuthClient = { len + IdClient || len + TS || Nonce }Kc,AC
+         *
+         * Ktoken1024 = { len + { len + uid || len + IPclient || len + IDac || len + TSi || len + TSf || len + Kclient,ac } ||
+         *              len+{ len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }SIGauth } Kauth,ac
+         *
+         * Kvtoken = { len + { len + kvtoken_content || len + SIGac( kvtoken_content ) } Kac,s }
+         * kvtoken_content = { len + uid || len + IpClient || len + IdService || len + TSi || len + TSf || len + Kc,s  || len + perms }
          */
 
         // ===== Receive-1 =====
@@ -87,7 +91,6 @@ public class AccessControlServer {
         // ===== Send-1 =====
         // { len+KeyC,Serviço || len+IdServiço || len+TSf || len+KvToken }
         //Kvtoken = {  len+uid || len+IpClient || len+IdService|| ||len+TSi || len+TSf || len+Kc,servive  || len+perms || AssAc(token}Kac,s
-
 
         Instant tsi = Instant.now();
         Instant tsf = tsi.plus(Duration.ofHours(CommonValues.TOKEN_VALIDITY_HOURS));

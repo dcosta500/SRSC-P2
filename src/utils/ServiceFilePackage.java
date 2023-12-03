@@ -5,53 +5,66 @@ import java.nio.charset.StandardCharsets;
 import java.security.Key;
 
 import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.time.Instant;
-import java.util.Arrays;
 
 public class ServiceFilePackage {
 
-    private static final byte[] IS_DIR = {0x0};
-    private static final byte[] IS_FILE = {0x1};
-
-    private byte[] content;
+    private final boolean isCorrupted;
+    private String path;
     private String owner;
-    private Instant creation;
+    private Instant creationTime;
     private String lastWriteUser;
     private Instant lastWriteTime;
     private String lastReadUser;
     private Instant lastReadTime;
-    private String path;
-    private byte[] dir;
-    private boolean isCorrupted;
+    private byte[] content;
 
-
-    public ServiceFilePackage(byte[] content) {
-        this.isCorrupted = unpack(content);
+    public ServiceFilePackage(byte[] data) {
+        this.isCorrupted = unpack(data);
     }
 
-    // {len+{ len + content || len + owner || len+TSCreation || len + lastChangedUser || len + TSLastChanged } || len+Ass(len + content || len + uidClient)}Kcpriv
-    private boolean unpack(byte[] content) {
+    private boolean unpack(byte[] data) {
+        /* *
+         * File -> { len + fileContent || len + SIGs(fileContent) }Kspriv
+         * fileContent = { len + metadata || len + content }
+         * metadata = { len + path || len + owner || len + TSCreation || len + lastChangedUser || len + TSLastChanged || len + lastReadUser || len + TSLastRead }
+         * */
         Key key = CryptoStuff.parseSymKeyFromBase64(System.getProperty("PRIVATE_SYM_KEY"));
-        byte[] contentDecrypted = CryptoStuff.symDecrypt(key, content);
+        byte[] contentDecrypted = CryptoStuff.symDecrypt(key, data);
         ByteBuffer bb = ByteBuffer.wrap(contentDecrypted);
 
-        byte[] firstHalf = MySSLUtils.getNextBytes(bb);
+        byte[] fileContent = MySSLUtils.getNextBytes(bb);
         byte[] signature = MySSLUtils.getNextBytes(bb);
-        bb = ByteBuffer.wrap(firstHalf);
-        this.dir = MySSLUtils.getNextBytes(bb);
-        this.path = new String(MySSLUtils.getNextBytes(bb), StandardCharsets.UTF_8);
-        if (Arrays.equals(dir, IS_FILE)) this.content = MySSLUtils.getNextBytes(bb);
-        this.owner = new String(MySSLUtils.getNextBytes(bb), StandardCharsets.UTF_8);
-        this.creation = Instant.parse(new String(MySSLUtils.getNextBytes(bb), StandardCharsets.UTF_8));
-        this.lastWriteUser = new String(MySSLUtils.getNextBytes(bb), StandardCharsets.UTF_8);
-        this.lastWriteTime = Instant.parse(new String(MySSLUtils.getNextBytes(bb), StandardCharsets.UTF_8));
-        this.lastReadUser = new String(MySSLUtils.getNextBytes(bb), StandardCharsets.UTF_8);
-        this.lastReadTime = Instant.parse(new String(MySSLUtils.getNextBytes(bb), StandardCharsets.UTF_8));
-        if (!CryptoStuff.verifySignature(CryptoStuff.getPublicKeyFromTruststore("ss", "ss123456"), firstHalf, signature)) {
-            System.out.println("Signature does not match in the file");
-            System.out.println("File is curropted");
+
+        // Verify signature
+        PublicKey pubKey = CryptoStuff.getPublicKeyFromTruststore("ss", "ss123456");
+        if (!CryptoStuff.verifySignature(pubKey, fileContent, signature)) {
+            System.out.println("Signature does not match in the file.");
+            System.out.println("File is corrupted.");
             return true;
         }
+
+        // Unpack
+        bb = ByteBuffer.wrap(fileContent);
+        byte[] pathBytes = MySSLUtils.getNextBytes(bb);
+        byte[] ownerBytes = MySSLUtils.getNextBytes(bb);
+        byte[] creationTimeBytes = MySSLUtils.getNextBytes(bb);
+        byte[] lastWriteUserBytes = MySSLUtils.getNextBytes(bb);
+        byte[] lastWriteTimeBytes = MySSLUtils.getNextBytes(bb);
+        byte[] lastReadUserBytes = MySSLUtils.getNextBytes(bb);
+        byte[] lastReadTimeBytes = MySSLUtils.getNextBytes(bb);
+
+        // Write values
+        this.path = new String(pathBytes, StandardCharsets.UTF_8);
+        this.owner = new String(ownerBytes, StandardCharsets.UTF_8);
+        this.creationTime = Instant.parse(new String(creationTimeBytes, StandardCharsets.UTF_8));
+        this.lastWriteUser = new String(lastWriteUserBytes, StandardCharsets.UTF_8);
+        this.lastWriteTime = Instant.parse(new String(lastWriteTimeBytes, StandardCharsets.UTF_8));
+        this.lastReadUser = new String(lastReadUserBytes, StandardCharsets.UTF_8);
+        this.lastReadTime = Instant.parse(new String(lastReadTimeBytes, StandardCharsets.UTF_8));
+
+        // Not corrupted
         return false;
     }
 
@@ -59,30 +72,25 @@ public class ServiceFilePackage {
         return content;
     }
 
-
     public String getOwner() {
         return owner;
     }
 
-
-    public Instant getCreation() {
-        return creation;
+    public Instant getCreationTime() {
+        return creationTime;
     }
 
     public String getLastWriteUser() {
         return lastWriteUser;
     }
 
-
     public Instant getLastWriteTime() {
         return lastWriteTime;
     }
 
-
     public String getLastReadUser() {
         return lastReadUser;
     }
-
 
     public Instant getLastReadTime() {
         return lastReadTime;
@@ -92,111 +100,138 @@ public class ServiceFilePackage {
         return path;
     }
 
-    public boolean isDir() {
-        return Arrays.equals(this.dir, IS_DIR);
+    public String getMetadata() {
+        return String.format("Metadata -> [ name:%s, owner:%s, createTime:%s, lastEditUser:%s, lastEditTime:%s, lastReadUser:%s, lastReadTime:%s ]",
+                path, owner, creationTime, lastWriteUser, lastWriteTime, lastReadUser, lastReadTime);
     }
+    public static byte[] createFileBytes(byte[] content, String owner, String path) {
+        /* *
+         * File -> { len + fileContent || len + SIGs(fileContent) }Kspriv
+         * fileContent = { len + metadata || len + content }
+         * metadata = { len + path || len + owner || len + TSCreation || len + lastChangedUser || len + TSLastChanged || len + lastReadUser || len + TSLastRead }
+         * */
 
-
-
-    // { len + {  len + File Format || len+Ass() }Kspriv }
-    // File Format -> {}
-    // File Format -> { dir || len+ Path || len + content || len + owner || len+TSCreation || len + lastChangedUser || len + TSLastChanged ||
-    //    len + LastReadUser || len + LastReadTS }
-    // metadata: isDir, path, owner, TSCreation, lastChangedUser, TSLastChanged, lastReadUser, TSLastRead
-    public static byte[] createFile(byte[] content, String owner, String path) {
+        // Metadata
+        byte[] pathBytes = path.getBytes();
+        byte[] ownerBytes = owner.getBytes();
         byte[] tsCreation = Instant.now().toString().getBytes();
-        byte[] firstHalfFile = new byte[1 + 8 * Integer.BYTES + path.getBytes().length + content.length + 2 * owner.getBytes().length + 2 + tsCreation.length];
-        ByteBuffer bb = ByteBuffer.wrap(firstHalfFile);
-        MySSLUtils.putLengthAndBytes(bb, IS_FILE, path.getBytes(), content, owner.getBytes(), tsCreation, owner.getBytes(), tsCreation, new byte[0], new byte[0]);
+        byte[] writeAuthorBytes = owner.getBytes(); // Changed
+        byte[] tsLastChangedBytes = Instant.now().toString().getBytes(); // Changed
+        byte[] lastReadUserBytes = new byte[0];
+        byte[] tsLastReadBytes = new byte[0];
+
+        byte[] metadata = constructMetadata(pathBytes, ownerBytes, tsCreation, writeAuthorBytes, tsLastChangedBytes, lastReadUserBytes, tsLastReadBytes);
+
+        // File Content
+        byte[] fileContent = createFileContent(content, metadata);
+
+        // Signature
+        return signFileContentAndEncrypt(fileContent);
+    }
+
+    public static byte[] writeFileBytes(ServiceFilePackage oldFile, byte[] content, String writeAuthor) {
+        /* *
+         * File -> { len + fileContent || len + SIGs(fileContent) }Kspriv
+         * fileContent = { len + metadata || len + content }
+         * metadata = { len + path || len + owner || len + TSCreation || len + lastChangedUser || len + TSLastChanged || len + lastReadUser || len + TSLastRead }
+         * */
+
+        if (oldFile.isCorrupted) {
+            System.out.println("File is corrupted");
+            return null;
+        }
+
+        // Reconstruct metadata with modifications
+        byte[] pathBytes = oldFile.getPath().getBytes();
+        byte[] ownerBytes = oldFile.getOwner().getBytes();
+        byte[] tsCreation = oldFile.getCreationTime().toString().getBytes();
+        byte[] writeAuthorBytes = writeAuthor.getBytes(); // Changed
+        byte[] tsLastChangedBytes = Instant.now().toString().getBytes(); // Changed
+        byte[] lastReadUserBytes = oldFile.getLastReadUser().getBytes();
+        byte[] tsLastReadBytes = oldFile.getLastReadTime().toString().getBytes();
+
+        byte[] metadata = constructMetadata(pathBytes, ownerBytes, tsCreation, writeAuthorBytes, tsLastChangedBytes, lastReadUserBytes, tsLastReadBytes);
+
+        // Pack metadata with new content
+        byte[] fileContent = createFileContent(content, metadata);
+
+        // Signature
+        return signFileContentAndEncrypt(fileContent);
+    }
+
+    public static byte[] readFileBytes(ServiceFilePackage oldFile, String readUser) {
+        /* *
+         * File -> { len + fileContent || len + SIGs(fileContent) }Kspriv
+         * fileContent = { len + metadata || len + content }
+         * metadata = { len + path || len + owner || len + TSCreation || len + lastChangedUser || len + TSLastChanged || len + lastReadUser || len + TSLastRead }
+         * */
+
+        if (oldFile.isCorrupted) {
+            System.out.println("File is corrupted");
+            return null;
+        }
+
+        // Reconstruct metadata with modifications
+        byte[] pathBytes = oldFile.getPath().getBytes();
+        byte[] ownerBytes = oldFile.getOwner().getBytes();
+        byte[] tsCreation = oldFile.getCreationTime().toString().getBytes();
+        byte[] writeAuthorBytes = oldFile.getLastWriteUser().getBytes();
+        byte[] tsLastChangedBytes = oldFile.getLastWriteTime().toString().getBytes();
+        byte[] lastReadUserBytes = readUser.getBytes(); // Changed
+        byte[] tsLastReadBytes = Instant.now().toString().getBytes(); // Changed
+
+        byte[] metadata = constructMetadata(pathBytes, ownerBytes, tsCreation, writeAuthorBytes, tsLastChangedBytes, lastReadUserBytes, tsLastReadBytes);
+
+        // Pack metadata with old content
+        byte[] fileContent = createFileContent(oldFile.getContent(), metadata);
+
+        // Signature
+        return signFileContentAndEncrypt(fileContent);
+    }
+
+    public static byte[] copyFileBytes(ServiceFilePackage oldFile, String copyAuthor, String newPath) {
+        /* *
+         * File -> { len + fileContent || len + SIGs(fileContent) }Kspriv
+         * fileContent = { len + metadata || len + content }
+         * metadata = { len + path || len + owner || len + TSCreation || len + lastChangedUser || len + TSLastChanged || len + lastReadUser || len + TSLastRead }
+         * */
+
+        if (oldFile.isCorrupted) {
+            System.out.println("File is corrupted");
+            return null;
+        }
+
+        return ServiceFilePackage.createFileBytes(oldFile.getContent(), copyAuthor, newPath);
+    }
+
+    // ===== AUX METHODS =====
+    private static byte[] constructMetadata(byte[] pathBytes, byte[] ownerBytes, byte[] tsCreation,
+                                            byte[] writeAuthorBytes, byte[] tsLastChangedBytes, byte[] lastReadUserBytes, byte[] tsLastReadBytes) {
+        // metadata = { len + path || len + owner || len + TSCreation || len + lastChangedUser || len + TSLastChanged || len + lastReadUser || len + TSLastRead }
+        byte[] metadata = new byte[7 * Integer.BYTES + pathBytes.length + ownerBytes.length + tsCreation.length
+                + writeAuthorBytes.length + tsLastChangedBytes.length + lastReadUserBytes.length + tsLastReadBytes.length];
+        ByteBuffer bb = ByteBuffer.wrap(metadata);
+        MySSLUtils.putLengthAndBytes(bb, pathBytes, ownerBytes, tsCreation, writeAuthorBytes, tsLastChangedBytes,
+                lastReadUserBytes, tsLastReadBytes);
+        return metadata;
+    }
+
+    private static byte[] createFileContent(byte[] content, byte[] metadata) {
+        byte[] fileContent = new byte[2 * Integer.BYTES + metadata.length + content.length];
+        ByteBuffer bb = ByteBuffer.wrap(fileContent);
+        MySSLUtils.putLengthAndBytes(bb, metadata, content);
+        return fileContent;
+    }
+
+    private static byte[] signFileContentAndEncrypt(byte[] fileContent) {
+        // File -> { len + fileContent || len + SIGs(fileContent) }Kspriv
         PrivateKey privKey = CryptoStuff.getPrivateKeyFromKeystore("ss", "ss123456");
-        byte[] signature = CryptoStuff.sign(privKey, firstHalfFile);
-        byte[] fullFile = new byte[2 * Integer.BYTES + firstHalfFile.length + signature.length];
-        bb = ByteBuffer.wrap(fullFile);
-        MySSLUtils.putLengthAndBytes(bb, firstHalfFile, signature);
+        byte[] signature = CryptoStuff.sign(privKey, fileContent);
+
+        // Encrypt and Pack
+        byte[] fileAndSigBytes = createFileContent(signature, fileContent);
 
         Key key = CryptoStuff.parseSymKeyFromBase64(System.getProperty("PRIVATE_SYM_KEY"));
-        return CryptoStuff.symEncrypt(key, fullFile);
-    }
-
-    // { len + { len + File Format || len+Ass() }Kspriv }
-    //File Format -> { len + content || len + owner || len+TSCreation || len + lastChangedUser || len + TSLastChanged ||
-    //    len + LastReadUser || len + LastReadTS }
-    public static byte[] writeFile(ServiceFilePackage oldfile, byte[] content, String whoWrote) {
-        if (oldfile.isCorrupted) {
-            System.out.println("File is corrputed");
-            return null;
-        }
-        byte[] tsChange = Instant.now().toString().getBytes();
-        byte[] firstHalfFile = new byte[1 + 8 * Integer.BYTES + oldfile.getPath().getBytes().length + oldfile.content.length + oldfile.getOwner().getBytes().length + oldfile.getCreation().toString().getBytes().length +
-                whoWrote.getBytes().length + tsChange.length + oldfile.getLastReadUser().getBytes().length + oldfile.getLastReadTime().toString().getBytes().length];
-
-        ByteBuffer bb = ByteBuffer.wrap(firstHalfFile);
-        MySSLUtils.putLengthAndBytes(bb, IS_FILE, oldfile.getPath().getBytes(), content, oldfile.owner.getBytes(), oldfile.owner.getBytes(), whoWrote.getBytes(), tsChange, oldfile.getLastReadUser().getBytes(),
-                oldfile.getLastReadTime().toString().getBytes());
-        byte[] signature = CryptoStuff.sign(CryptoStuff.getPrivateKeyFromKeystore("ss", "ss123456"), firstHalfFile);
-        byte[] fullFile = new byte[2 * Integer.BYTES + firstHalfFile.length + signature.length];
-        bb = ByteBuffer.wrap(fullFile);
-
-        MySSLUtils.putLengthAndBytes(bb, firstHalfFile, signature);
-        Key key = CryptoStuff.parseSymKeyFromBase64(System.getProperty("PRIVATE_SYM_KEY"));
-        return CryptoStuff.symEncrypt(key, fullFile);
-    }
-
-    // { len + { len + File Format || len+Ass() }Kspriv }
-    //File Format -> { len + content || len + owner || len+TSCreation || len + lastChangedUser || len + TSLastChanged ||
-    //    len + LastReadUser || len + LastReadTS }
-    public static byte[] readFile(ServiceFilePackage oldfile, String whoRead) {
-        if (oldfile.isCorrupted) {
-            System.out.println("File is corrputed");
-            return null;
-        }
-        byte[] tsRead = Instant.now().toString().getBytes();
-        byte[] firstHalfFile = new byte[1 + 8 * Integer.BYTES + oldfile.getContent().length + oldfile.getOwner().getBytes().length + oldfile.getCreation().toString().getBytes().length +
-                oldfile.getLastWriteUser().getBytes().length + oldfile.getLastWriteTime().toString().getBytes().length + whoRead.getBytes().length + tsRead.length];
-        ByteBuffer bb = ByteBuffer.wrap(firstHalfFile);
-        MySSLUtils.putLengthAndBytes(bb, IS_FILE, oldfile.getPath().getBytes(), oldfile.getContent(), oldfile.owner.getBytes(), oldfile.owner.getBytes(), oldfile.getLastWriteUser().getBytes(), oldfile.getLastWriteTime().toString().getBytes(), whoRead.getBytes(),
-                tsRead);
-        byte[] signature = CryptoStuff.sign(CryptoStuff.getPrivateKeyFromKeystore("ss", "ss123456"), firstHalfFile);
-        byte[] fullFile = new byte[2 * Integer.BYTES + firstHalfFile.length + signature.length];
-        bb = ByteBuffer.wrap(fullFile);
-        byte[] fullFileEncrypted;
-        MySSLUtils.putLengthAndBytes(bb, firstHalfFile, signature);
-        Key key = CryptoStuff.parseSymKeyFromBase64(System.getProperty("PRIVATE_SYM_KEY"));
-        fullFileEncrypted = CryptoStuff.symEncrypt(key, fullFile);
-        return fullFileEncrypted;
-    }
-
-   /* public static byte[] createDir(String owner,String path) {
-        byte[] tsCreation = Instant.now().toString().getBytes();
-        byte[] firstHalfFile = new byte[ 1+ 7 * Integer.BYTES +path.getBytes().length+ 2 * owner.getBytes().length + 2 + tsCreation.length];
-        ByteBuffer bb = ByteBuffer.wrap(firstHalfFile);
-        MySSLUtils.putLengthAndBytes(bb,  IS_DIR,path.getBytes(),owner.getBytes(), tsCreation, owner.getBytes(), tsCreation, new byte[0], new byte[0]);
-        PrivateKey privKey = CryptoStuff.getPrivateKeyFromKeystore("ss", "ss123456");
-        byte[] signature = CryptoStuff.sign(privKey, firstHalfFile);
-        byte[] fullFile = new byte[2 * Integer.BYTES + firstHalfFile.length + signature.length];
-        bb = ByteBuffer.wrap(fullFile);
-        MySSLUtils.putLengthAndBytes(bb, firstHalfFile, signature);
-        Key key = CryptoStuff.parseSymKeyFromBase64(System.getProperty("PRIVATE_SYM_KEY"));
-        return CryptoStuff.symEncrypt(key, fullFile);
-    }*/
-
-    public static byte[] copyFile(ServiceFilePackage oldfile, String newPath) {
-        if (oldfile.isCorrupted) {
-            System.out.println("File is corrputed");
-            return null;
-        }
-        byte[] firstHalfFile = new byte[1 + 8 * Integer.BYTES + newPath.getBytes().length + oldfile.content.length + oldfile.getOwner().getBytes().length + oldfile.getCreation().toString().getBytes().length +
-                oldfile.getLastWriteUser().getBytes().length + oldfile.getLastWriteTime().toString().getBytes().length + oldfile.getLastReadUser().getBytes().length + oldfile.getLastReadTime().toString().getBytes().length];
-
-        ByteBuffer bb = ByteBuffer.wrap(firstHalfFile);
-        MySSLUtils.putLengthAndBytes(bb, IS_FILE, oldfile.getPath().getBytes(), oldfile.content, oldfile.owner.getBytes(), oldfile.owner.getBytes(), oldfile.getLastWriteUser().getBytes(),
-                oldfile.getLastWriteTime().toString().getBytes(), oldfile.getLastReadUser().getBytes(),
-                oldfile.getLastReadTime().toString().getBytes());
-        byte[] signature = CryptoStuff.sign(CryptoStuff.getPrivateKeyFromKeystore("ss", "ss123456"), firstHalfFile);
-        byte[] fullFile = new byte[2 * Integer.BYTES + firstHalfFile.length + signature.length];
-        bb = ByteBuffer.wrap(fullFile);
-        MySSLUtils.putLengthAndBytes(bb, firstHalfFile, signature);
-        Key key = CryptoStuff.parseSymKeyFromBase64(System.getProperty("PRIVATE_SYM_KEY"));
-        return CryptoStuff.symEncrypt(key, fullFile);
+        return CryptoStuff.symEncrypt(key, fileAndSigBytes);
     }
 }

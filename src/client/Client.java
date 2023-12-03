@@ -2,7 +2,6 @@ package client;
 
 import javax.net.ssl.*;
 
-import client.responseModels.AccessResponseModel;
 import client.responseModels.LoginResponseModel;
 import utils.*;
 
@@ -70,8 +69,8 @@ public class Client {
                 case LOGIN:
                     login(cmd);
                     break;
-                case ACCESS:
-                    access(cmd);
+                case MKDIR:
+                    makedir(cmd);
                     break;
                 default:
                     break masterLoop;
@@ -121,7 +120,7 @@ public class Client {
             return;
         }
 
-        AccessResponseModel arm = ClientCommands.access(socket, auth_ktoken1024, client_ac_key, uid, cmd);
+        AccessResponseModel arm = ClientCommands.access(socket, auth_ktoken1024, null, client_ac_key, uid, cmd);
         processAccessControlResponse(arm);
     }
 
@@ -130,9 +129,31 @@ public class Client {
             return;
         }
 
-        control_vtoken1024 = arm.kvtoken1024;
+        control_vtoken1024 = arm.kvtoken;
         System.out.println("Access Control granted successfully done at: " + arm.timestampFinal.toString());
         client_ss_key = arm.clientService_key;
+    }
+
+    private static void makedir(String cmd) {
+        if (!ClientValidator.makedirValidator(cmd)){
+            System.out.println("Command is not correctly formatted");
+            return;
+        }
+
+        if (auth_ktoken1024 == null || auth_ktoken1024.length == 0) {
+            System.out.println("You haven't logged in yet.");
+            return;
+        }
+
+        MakedirResponseModel mdm = ClientCommands.mkdir(socket, auth_ktoken1024, null, client_ac_key, uid, cmd);
+        processMakedirResponse(mdm);
+    }
+
+    private static void processMakedirResponse(MakedirResponseModel mdm) {
+        if (mdm == null) {
+            return;
+        }
+        System.out.println(mdm.getResponse());
     }
 
     private static void processClientConfFile(){

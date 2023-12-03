@@ -8,6 +8,8 @@ public abstract class CommonValues {
     public static final String AC_HOSTNAME = "access_control";
     public static final String SS_HOSTNAME = "storage_service";
 
+    // Service IDs
+    public static final String STORAGE_SERVICE_ID = "storage";
 
     // Port values
     public static final int CLIENT_PORT_NUMBER = 9000;
@@ -32,6 +34,7 @@ public abstract class CommonValues {
 
     // Packages
     public static final int DATA_SIZE = 2048;
+    public static final int FILE_SIZE = 4_000_000;
 
     // Error Codes
     public static final int OK_CODE = 0;

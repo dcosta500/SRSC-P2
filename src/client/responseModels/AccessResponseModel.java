@@ -7,14 +7,14 @@ import java.security.Key;
 import java.time.Instant;
 
 public class AccessResponseModel {
-    public byte[] kvtoken1024;
+    public byte[] kvtoken;
     public Instant timestampFinal;
     public Key clientService_key;
 
     public String serviceId;
 
-    public AccessResponseModel(byte[] kvtoken1024, Instant timestampFinal, Key clientService_key, String serviceId) {
-        this.kvtoken1024 = kvtoken1024;
+    public AccessResponseModel(byte[] kvtoken, Instant timestampFinal, Key clientService_key, String serviceId) {
+        this.kvtoken = kvtoken;
         this.timestampFinal = timestampFinal;
         this.clientService_key = clientService_key;
         this.serviceId = serviceId;
