@@ -39,11 +39,35 @@ public class StorageServiceServer {
         }
 
         ByteBuffer bb = ByteBuffer.wrap(receivedContent);
-
+        byte[] userIdBytes = MySSLUtils.getNextBytes(bb);
         byte[] clientServiceKeyBytes = MySSLUtils.getNextBytes(bb);
         byte[] arguments = MySSLUtils.getNextBytes(bb);
         long nonce2 = bb.getLong();
 
+        // arguments = len + username
+        bb = ByteBuffer.wrap(arguments);
+        String username = new String(MySSLUtils.getNextBytes(bb));
+        String path = new String(MySSLUtils.getNextBytes(bb));
+        Path directory;
+        if (path.length() <= 1) {
+            directory = Paths.get(DEFAULT_DIR + "/" + username);
+        } else {
+            directory = Paths.get(DEFAULT_DIR + "/" + username + "/" + path);
+        }
+
+        byte[] response;
+        try {
+            DirectoryStream<Path> directoryStream;
+            directoryStream = Files.newDirectoryStream(directory);
+            String directories = "";
+            for (Path entry : directoryStream)
+                directories = directories.concat(entry.getFileName() + "\n");
+            response = directories.getBytes();
+        } catch (Exception e) {
+            System.err.println("directory: " + directory);
+            System.err.println("username: " + username);
+            return MySSLUtils.buildErrorResponse();
+        }
         Key clientServiceKey = CryptoStuff.parseSymKeyFromBytes(clientServiceKeyBytes);
 
         // TODO: actual codigo do LS
@@ -85,7 +109,7 @@ public class StorageServiceServer {
         }
 
         ByteBuffer bb = ByteBuffer.wrap(receivedContent);
-
+        byte[] userIdBytes = MySSLUtils.getNextBytes(bb);
         byte[] clientServiceKeyBytes = MySSLUtils.getNextBytes(bb);
         byte[] arguments = MySSLUtils.getNextBytes(bb);
         long nonce2 = bb.getLong();
@@ -118,6 +142,7 @@ public class StorageServiceServer {
 
         // ===== SEND 2 =====
         // { len + { len + Response || Nonce }Kc,s }
+
         byte[] responseDecrypted = new byte[Integer.BYTES + response.length + Long.BYTES];
         bb = ByteBuffer.wrap(responseDecrypted);
 
@@ -139,15 +164,40 @@ public class StorageServiceServer {
         }
 
         ByteBuffer bb = ByteBuffer.wrap(receivedContent);
-
+        byte[] userIdBytes = MySSLUtils.getNextBytes(bb);
         byte[] clientServiceKeyBytes = MySSLUtils.getNextBytes(bb);
         byte[] arguments = MySSLUtils.getNextBytes(bb);
         long nonce2 = bb.getLong();
+        // arguments = len + username || len + path/file
+        bb = ByteBuffer.wrap(arguments);
+        String userPath = new String(MySSLUtils.getNextBytes(bb));
+        String username = Arrays.toString(userIdBytes);
+        String path = new String(MySSLUtils.getNextBytes(bb));
 
         Key clientServiceKey = CryptoStuff.parseSymKeyFromBytes(clientServiceKeyBytes);
 
-        // TODO: actual codigo do PUT
-        byte[] response = new byte[0];
+        String directoryPath = DEFAULT_DIR + "/" + userPath + "/" + path;
+        Path file = Paths.get(directoryPath);
+        if (!Files.exists(file)) {
+            System.err.println("File does not exist");
+            return MySSLUtils.buildErrorResponse();
+        }
+        byte[] encryptedFile;
+        ServiceFilePackage fileRead;
+        try {
+            encryptedFile = Files.readAllBytes(file);
+            fileRead = new ServiceFilePackage(encryptedFile);
+            byte[] newFile = ServiceFilePackage.readFileBytes(fileRead, username);
+            Files.write(file, newFile != null ? newFile : new byte[0], StandardOpenOption.CREATE);
+        } catch (IOException e) {
+            System.err.println("Catastrophic failure");
+            System.out.println("username: " + username);
+            System.out.println("userPath: " + userPath);
+            System.out.println("path: " + path);
+            return MySSLUtils.buildErrorResponse();
+        }
+        byte[] response = fileRead.getContent();
+
 
         // ===== SEND 2 =====
         // { len + { len + Response || Nonce }Kc,s }
@@ -172,16 +222,44 @@ public class StorageServiceServer {
         }
 
         ByteBuffer bb = ByteBuffer.wrap(receivedContent);
-
+        byte[] userIdBytes = MySSLUtils.getNextBytes(bb);
         byte[] clientServiceKeyBytes = MySSLUtils.getNextBytes(bb);
         byte[] arguments = MySSLUtils.getNextBytes(bb);
         long nonce2 = bb.getLong();
+        // arguments = len + username || len + path1/file1 || len + path2/file2
+        bb = ByteBuffer.wrap(arguments);
+        String userPath = new String(MySSLUtils.getNextBytes(bb));
+        String username = Arrays.toString(userIdBytes);
+        String path1 = new String(MySSLUtils.getNextBytes(bb));
+        String path2 = new String(MySSLUtils.getNextBytes(bb));
 
         Key clientServiceKey = CryptoStuff.parseSymKeyFromBytes(clientServiceKeyBytes);
 
-        // TODO: actual codigo do PUT
-        byte[] response = new byte[0];
+        String directoryPath = DEFAULT_DIR + "/" + userPath + "/" + path1;
 
+        String toDirectoryPath = DEFAULT_DIR + "/" + userPath + "/" + path2;
+        Path file1 = Paths.get(directoryPath);
+        Path file2 = Paths.get(toDirectoryPath);
+        if (!Files.exists(file1)) {
+            System.err.println("File does not exist");
+            return MySSLUtils.buildErrorResponse();
+        }
+        byte[] encryptedFile;
+        ServiceFilePackage fileRead;
+        try {
+            encryptedFile = Files.readAllBytes(file1);
+            fileRead = new ServiceFilePackage(encryptedFile);
+            byte[] newFile = ServiceFilePackage.copyFileBytes(fileRead, username, path2);
+            Files.write(file2, newFile != null ? newFile : new byte[0], StandardOpenOption.CREATE);
+        } catch (IOException e) {
+            System.err.println("Catastrophic failure");
+            System.out.println("username: " + username);
+            System.out.println("userPath: " + userPath);
+            System.out.println("path1: " + path1);
+            System.out.println("path2: " + path2);
+            return MySSLUtils.buildErrorResponse();
+        }
+        byte[] response = fileRead.getContent();
         // ===== SEND 2 =====
         // { len + { len + Response || Nonce }Kc,s }
         byte[] responseDecrypted = new byte[Integer.BYTES + response.length + Long.BYTES];
@@ -196,7 +274,6 @@ public class StorageServiceServer {
 
 
         return MySSLUtils.buildResponse(CommonValues.OK_CODE, dataToSend);
-
     }
 
 
@@ -207,14 +284,29 @@ public class StorageServiceServer {
         }
 
         ByteBuffer bb = ByteBuffer.wrap(receivedContent);
-
+        byte[] userIdBytes = MySSLUtils.getNextBytes(bb);
         byte[] clientServiceKeyBytes = MySSLUtils.getNextBytes(bb);
         byte[] arguments = MySSLUtils.getNextBytes(bb);
         long nonce2 = bb.getLong();
 
-        Key clientServiceKey = CryptoStuff.parseSymKeyFromBytes(clientServiceKeyBytes);
+        // arguments = len + username || len + path
+        bb = ByteBuffer.wrap(arguments);
+        String username = new String(MySSLUtils.getNextBytes(bb));
+        Path filePath = Paths.get(DEFAULT_DIR + "/" + username + "/" + new String(MySSLUtils.getNextBytes(bb)));
+        try {
+            Files.delete(filePath);
+        } catch (NoSuchFileException e) {
+            System.err.println("File does not exist");
+            return MySSLUtils.buildErrorResponse();
+        } catch (DirectoryNotEmptyException e) {
+            System.err.println("File is a directory and could not otherwise be deleted because the directory is not empty");
+            return MySSLUtils.buildErrorResponse();
+        } catch (Exception e) {
+            System.err.println("Catastrophic Failure");
+            return MySSLUtils.buildErrorResponse();
+        }
 
-        // TODO: actual codigo do PUT
+        Key clientServiceKey = CryptoStuff.parseSymKeyFromBytes(clientServiceKeyBytes);
         byte[] response = new byte[0];
 
         // ===== SEND 2 =====
@@ -290,12 +382,54 @@ public class StorageServiceServer {
             return MySSLUtils.buildErrorResponse();
         }
 
+        ByteBuffer bb = ByteBuffer.wrap(receivedContent);
+        byte[] userIdBytes = MySSLUtils.getNextBytes(bb);
+        byte[] clientServiceKeyBytes = MySSLUtils.getNextBytes(bb);
+        byte[] arguments = MySSLUtils.getNextBytes(bb);
+        long nonce2 = bb.getLong();
+        // arguments = len + username || len + path/file
+        bb = ByteBuffer.wrap(arguments);
+        String userPath = new String(MySSLUtils.getNextBytes(bb));
+        String username = Arrays.toString(userIdBytes);
+        String path = new String(MySSLUtils.getNextBytes(bb));
+
+        Key clientServiceKey = CryptoStuff.parseSymKeyFromBytes(clientServiceKeyBytes);
+
+        String directoryPath = DEFAULT_DIR + "/" + userPath + "/" + path;
+        Path file = Paths.get(directoryPath);
+        if (!Files.exists(file)) {
+            System.err.println("File does not exist");
+            return MySSLUtils.buildErrorResponse();
+        }
+        byte[] encryptedFile;
+        ServiceFilePackage fileRead;
+        try {
+            encryptedFile = Files.readAllBytes(file);
+            fileRead = new ServiceFilePackage(encryptedFile);
+        } catch (IOException e) {
+            System.err.println("Catastrophic failure");
+            System.out.println("username: " + username);
+            System.out.println("userPath: " + userPath);
+            System.out.println("path: " + path);
+            return MySSLUtils.buildErrorResponse();
+        }
+        byte[] response = fileRead.getMetadata().getBytes();
+
+        // ===== SEND 2 =====
+        // { len + { len + Response || Nonce }Kc,s }
+        byte[] responseDecrypted = new byte[Integer.BYTES + response.length + Long.BYTES];
+        bb = ByteBuffer.wrap(responseDecrypted);
+
+        MySSLUtils.putLengthAndBytes(bb, response);
+        bb.putLong(nonce2);
+        byte[] responseEncrypted = CryptoStuff.symEncrypt(clientServiceKey, responseDecrypted);
+        byte[] dataToSend = new byte[Integer.BYTES + responseEncrypted.length];
+        bb = ByteBuffer.wrap(dataToSend);
+        MySSLUtils.putLengthAndBytes(bb, responseEncrypted);
 
 
-
-
-
-
+        return MySSLUtils.buildResponse(CommonValues.OK_CODE, dataToSend);
+    }
 
     // ===== AUX METHODS =====
     private static byte[] receiveRequest(Command command, Socket mdSocket, byte[] content, Set<Long> nonceSet) {
@@ -383,10 +517,10 @@ public class StorageServiceServer {
         byte[] encryptedArgsAndNonce = MySSLUtils.getNextBytes(bb);
         byte[] argsAndNonce = CryptoStuff.symDecrypt(clientServiceKey, encryptedArgsAndNonce);
 
-        byte[] dataReceived = new byte[2 * Integer.BYTES + clientServiceKey.getEncoded().length + argsAndNonce.length];
+        byte[] dataReceived = new byte[3 * Integer.BYTES + idClient.length + clientServiceKey.getEncoded().length + argsAndNonce.length];
         bb = ByteBuffer.wrap(dataReceived);
 
-        MySSLUtils.putLengthAndBytes(bb, clientServiceKey.getEncoded(), argsAndNonce);
+        MySSLUtils.putLengthAndBytes(bb, idClient, clientServiceKey.getEncoded(), argsAndNonce);
 
         return dataReceived;
     }

@@ -4,7 +4,7 @@ public enum Command {
 
     SUM("sum"), MULT("mult"), STATS("stats"),
     LOGIN("login"), ACCESS("access"),
-    LIST("ls"), PUT("put"), GET("get"), COPY("cp"), REMOVE("rm");
+    LIST("ls"), PUT("put"), GET("get"), COPY("cp"), REMOVE("rm"), MKDIR("mkdir"), FILECMD("file");
 
     public String value;
 
