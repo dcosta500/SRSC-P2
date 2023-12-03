@@ -1,11 +1,10 @@
 package servers.StorageSystemService;
 
-import utils.Command;
-import utils.CommonValues;
-import utils.CryptoStuff;
-import utils.MySSLUtils;
+import utils.*;
 
-import javax.net.ssl.SSLContext;
+
+import java.io.IOException;
+import java.nio.file.*;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -13,11 +12,10 @@ import java.security.Key;
 import java.security.PublicKey;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Arrays;
-import java.util.Set;
+import java.util.*;
 
 public class StorageServiceServer {
-
+    private static final String DEFAULT_DIR = System.getProperty("user.dir") + "/data";
 
     public static byte[] list(Socket mdSocket, byte[] content, Set<Long> nonceSet) {
         /* *
@@ -70,8 +68,6 @@ public class StorageServiceServer {
         }
         Key clientServiceKey = CryptoStuff.parseSymKeyFromBytes(clientServiceKeyBytes);
 
-        // TODO: actual codigo do LS
-        byte[] response = new byte[0];
 
         // ===== SEND 2 =====
         // { len + { len + Response || Nonce }Kc,s }
@@ -88,7 +84,6 @@ public class StorageServiceServer {
 
         return MySSLUtils.buildResponse(CommonValues.OK_CODE, dataToSend);
     }
-
 
     public static byte[] put(Socket mdSocket, byte[] content, Set<Long> nonceSet) {
         /* *
@@ -111,7 +106,12 @@ public class StorageServiceServer {
         ByteBuffer bb = ByteBuffer.wrap(receivedContent);
         byte[] userIdBytes = MySSLUtils.getNextBytes(bb);
         byte[] clientServiceKeyBytes = MySSLUtils.getNextBytes(bb);
-        byte[] arguments = MySSLUtils.getNextBytes(bb);
+        byte[] arguments = MySSLUtils.getNextBytes(bb); //len+(len + userPath || len + path || len + content)
+        bb = ByteBuffer.wrap(arguments);
+        String username = new String(userIdBytes);
+        String userPath = new String(MySSLUtils.getNextBytes(bb));
+        String path = new String(MySSLUtils.getNextBytes(bb));
+        byte[] fileContent = MySSLUtils.getNextBytes(bb);
         long nonce2 = bb.getLong();
 
         Key clientServiceKey = CryptoStuff.parseSymKeyFromBytes(clientServiceKeyBytes);
@@ -275,7 +275,6 @@ public class StorageServiceServer {
 
         return MySSLUtils.buildResponse(CommonValues.OK_CODE, dataToSend);
     }
-
 
     public static byte[] remove(Socket mdSocket, byte[] content, Set<Long> nonceSet) {
         byte[] receivedContent = receiveRequest(Command.LIST, mdSocket, content, nonceSet);
@@ -460,6 +459,11 @@ public class StorageServiceServer {
         byte[] idClient = MySSLUtils.getNextBytes(bb);
         byte[] ipClientToken = MySSLUtils.getNextBytes(bb);
         byte[] idService = MySSLUtils.getNextBytes(bb);
+        String idServiceName = new String(idService, StandardCharsets.UTF_8);
+        if (!idServiceName.equals(CommonValues.SS_ID)) {
+            System.out.println("Token not valid for this service, expected " + CommonValues.SS_ID + " got " + idServiceName);
+            return null;
+        }
         Instant timestampInitial = Instant.parse(new String(MySSLUtils.getNextBytes(bb), StandardCharsets.UTF_8));
         Instant timestampFinal = Instant.parse(new String(MySSLUtils.getNextBytes(bb), StandardCharsets.UTF_8));
         Key clientServiceKey = CryptoStuff.parseSymKeyFromBytes(MySSLUtils.getNextBytes(bb));
@@ -469,28 +473,7 @@ public class StorageServiceServer {
         if (!checkPerms(permissions, command)) return null;
 
         //AuthClient2
-        bb = ByteBuffer.wrap(authClient2);
-
-        byte[] idClientAuth = MySSLUtils.getNextBytes(bb);
-        Instant timeStampAuth = Instant.parse(new String(MySSLUtils.getNextBytes(bb), StandardCharsets.UTF_8));
-        long nonce = bb.getLong();
-
-        if (nonceSet.contains(nonce)) {
-            System.out.println("Retransmission detected.");
-            return null;
-        }
-        nonceSet.add(nonce);
-
-        if (Arrays.equals(idClientAuth, idClient) && Arrays.equals(ipClientToken, ipClient)) {
-            System.out.println("idClientFromToken and idClientFromAuth didn't match");
-            return null;
-        }
-
-        Instant now = Instant.now();
-        if (now.isAfter(timeStampAuth.plus(Duration.ofSeconds(5))) && now.isAfter(timestampFinal)) {
-            System.out.println("Auth Client Expired");
-            return null;
-        }
+        if (!checkAuth(authClient2, nonceSet, idClient, ipClient, ipClientToken, timestampFinal)) return null;
 
         // ===== SEND 1 ====
         byte[] rChallengeBytes = new byte[Long.BYTES];
@@ -525,4 +508,45 @@ public class StorageServiceServer {
         return dataReceived;
     }
 
+    private static boolean checkAuth(byte[] authClient2, Set<Long> nonceSet, byte[] idClient, byte[] ipClient, byte[] ipClientToken, Instant timestampFinal) {
+        ByteBuffer bb = ByteBuffer.wrap(authClient2);
+
+        byte[] idClientAuth = MySSLUtils.getNextBytes(bb);
+        Instant timeStampAuth = Instant.parse(new String(MySSLUtils.getNextBytes(bb), StandardCharsets.UTF_8));
+        long nonce = bb.getLong();
+
+        if (nonceSet.contains(nonce)) {
+            System.out.println("Retransmission detected.");
+            return false;
+        }
+        nonceSet.add(nonce);
+
+        if (Arrays.equals(idClientAuth, idClient) && Arrays.equals(ipClientToken, ipClient)) {
+            System.out.println("idClientFromToken and idClientFromAuth didn't match");
+            return false;
+        }
+
+        Instant now = Instant.now();
+        if (now.isAfter(timeStampAuth.plus(Duration.ofSeconds(5))) && now.isAfter(timestampFinal)) {
+            System.out.println("Auth Client Expired");
+            return false;
+        }
+
+        return true;
+    }
+
+    private static boolean checkPerms(byte[] permissions, Command command) {
+        String perms = new String(permissions, StandardCharsets.UTF_8);
+        switch (command) {
+            case GET, LIST, FILECMD:
+                if (perms.equals(CommonValues.PERM_DENY)) return false;
+                break;
+            case PUT, REMOVE, COPY, MKDIR:
+                if (!perms.equals(CommonValues.PERM_READ_WRITE)) return false;
+                break;
+            default:
+                return false;
+        }
+        return true;
+    }
 }

@@ -23,6 +23,7 @@ public class SSServer {
     private static final boolean DO_CLIENT_AUTH = true;
     private static final Set<Long> nonceSet = new HashSet<>();
     private static final String[] usernames = { "alice", "bob", "carol", "david", "eric" };
+    private static final String DEFAULT_DIR = System.getProperty("user.dir")+"/data";
 
     private static byte[] executeCommand(Socket socket, DataPackage dp) {
         switch (dp.getCommand()) {
@@ -36,6 +37,10 @@ public class SSServer {
                 return StorageServiceServer.remove(socket,dp.getContent(),nonceSet);
             case COPY:
                 return StorageServiceServer.copy(socket,dp.getContent(),nonceSet);
+            case MKDIR:
+                return StorageServiceServer.mkdir(socket,dp.getContent(),nonceSet);
+            case FILECMD:
+                return StorageServiceServer.file(socket,dp.getContent(),nonceSet);
             default:
                 return new byte[0];
         }
@@ -74,9 +79,8 @@ public class SSServer {
     }
 
     private static void initDirs(){
-        String curDir = System.getProperty("user.dir");
         for (String user : usernames){
-            String directoryPath = curDir+"/"+user;
+            String directoryPath = DEFAULT_DIR+"/"+user;
             // Create a File object representing the directory
             File directory = new File(directoryPath);
             // Check if the directory doesn't exist, then create it
@@ -99,6 +103,7 @@ public class SSServer {
         System.setProperty("javax.net.ssl.trustStore", SERVER_TRUSTSTORE_PATH);
 
         initConf();
+        initDirs();
 
         ServerSocket ss = MySSLUtils.createServerSocket(CommonValues.SS_PORT_NUMBER, SERVER_KEYSTORE_PATH, PASSWORD,
                 DO_CLIENT_AUTH);

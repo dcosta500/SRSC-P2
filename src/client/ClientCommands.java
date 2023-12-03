@@ -265,6 +265,7 @@ public abstract class ClientCommands {
         }
 
         byte[] content = CryptoStuff.symDecrypt(client_auth_key, rp.getContent());
+        
 
         //  Kvtoken = { len + { len + kvtoken_content || len + SIGac( kvtoken_content ) } Kac,s }
         //  kvtoken_content = { len + uid || len + IpClient || len + IdService || len + TSi || len + TSf || len + Kc,s  || len + perms }

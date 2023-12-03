@@ -109,7 +109,7 @@ public class Client {
         client_ac_key = lrm.clientAc_SymKey;
     }
 
-    private static void access(String cmd){
+    /*private static void access(String cmd){
         if (!ClientValidator.accessValidator(cmd)){
             System.out.println("Command is not correctly formatted");
             return;
@@ -132,7 +132,7 @@ public class Client {
         control_vtoken1024 = arm.kvtoken;
         System.out.println("Access Control granted successfully done at: " + arm.timestampFinal.toString());
         client_ss_key = arm.clientService_key;
-    }
+    }*/
 
     private static void makedir(String cmd) {
         if (!ClientValidator.makedirValidator(cmd)){

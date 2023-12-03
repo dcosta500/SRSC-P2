@@ -128,7 +128,42 @@ public class MainDispatcher {
         return content;
     }
 
-    public static byte[] access(Socket clientSocket, byte[] content) {
+    public static byte[] makedir(Socket clientSocket, byte[] content){
+        return executeCommand(clientSocket,content,Command.MKDIR);
+    }
+
+    private static byte[] executeCommand(Socket clientSocket, byte[] content, Command command){
+
+        access(clientSocket, content);
+        SSLSocket ssSocket = startConnectiontoSSServer();
+        //===== Receive 1 from client =====
+        content = MySSLUtils.receiveData(clientSocket);
+        //===== Send 1 from ss =====
+        byte[] dataToSend_S2 = addClientIPToBeggining(clientSocket, content);
+        MySSLUtils.sendData(ssSocket, MySSLUtils.buildPackage(command, dataToSend_S2));
+
+        //===== Receive 2 from ss =====
+        content = MySSLUtils.receiveData(ssSocket);
+
+        // ===== Send 2 to client =====
+        MySSLUtils.sendData(clientSocket, content);
+
+        //===== Receive 3 from client =====
+        content = MySSLUtils.receiveData(clientSocket);
+
+        // ===== Send 3 to SS =====
+        byte[] dataToSend_S3 = addClientIPToBeggining(clientSocket, content);
+        MySSLUtils.sendData(ssSocket, dataToSend_S3);
+
+        //===== Receive 4 from SS ====
+
+        content = MySSLUtils.receiveData(ssSocket);
+
+        // ===== Send 4 to client =====
+        return content;
+    }
+
+    public static void access(Socket clientSocket, byte[] content) {
         /*
          * Data flow (basically add client ip before redirecting to auth server):
          * Receive-1: { len+IdService || len+token1024 || len+AuthClient}
@@ -150,7 +185,7 @@ public class MainDispatcher {
 
         // ===== Send-2 to client =====
         MySSLUtils.closeConnectionToServer(acSocket);
-        return content;
+        MySSLUtils.sendData(clientSocket, content);
     }
 
     // ===== Aux Methods =====
@@ -182,6 +217,14 @@ public class MainDispatcher {
         SSLSocketFactory factory = MySSLUtils.createClientSocketFactory("certs/mdCrypto/keystore_md.jks", "md123456");
         SSLSocket socket = MySSLUtils.startNewConnectionToServer(factory, CommonValues.AC_HOSTNAME,
                 CommonValues.AC_PORT_NUMBER);
+
+        return socket;
+    }
+
+    private static SSLSocket startConnectiontoSSServer(){
+        SSLSocketFactory factory = MySSLUtils.createClientSocketFactory("certs/mdCrypto/keystore_md.jks", "md123456");
+        SSLSocket socket = MySSLUtils.startNewConnectionToServer(factory, CommonValues.SS_HOSTNAME,
+                CommonValues.SS_PORT_NUMBER);
 
         return socket;
     }
