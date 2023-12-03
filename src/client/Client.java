@@ -6,7 +6,10 @@ import client.responseModels.AccessResponseModel;
 import client.responseModels.LoginResponseModel;
 import utils.*;
 
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.security.Key;
+import java.util.Properties;
 import java.util.Scanner;
 
 public class Client {
@@ -132,6 +135,19 @@ public class Client {
         client_ss_key = arm.clientService_key;
     }
 
+    private static void processClientConfFile(){
+        String client_conf_path = String.format("configs/clients/%s.conf", uid);
+        Properties props = new Properties();
+        try (FileInputStream input = new FileInputStream(client_conf_path)) {
+            props.load(input);
+        } catch (IOException e) {
+            System.out.println("Could not import client's .conf file.");
+            e.printStackTrace();
+        }
+
+        System.setProperty("PRIVATE_SYM_KEY", props.getProperty("PRIVATE_SYM_KEY"));
+    }
+
     public static void main(String[] args) {
         System.out.println(CLIENT_BOOT_MESSAGE);
 
@@ -141,9 +157,14 @@ public class Client {
         }
 
         uid = args[0];
+
+        // paths
         String client_keystore_path = String.format("certs/clients/%sCrypto/keystore_%s_cl.jks", uid, uid);
-        System.setProperty("javax.net.ssl.trustStore",
-                String.format("certs/clients/%sCrypto/%s_cl_truststore", uid, uid));
+        String client_truststore_path = String.format("certs/clients/%sCrypto/%s_cl_truststore", uid, uid);
+
+        // envs
+        System.setProperty("javax.net.ssl.trustStore", client_truststore_path);
+        processClientConfFile();
 
         try {
             factory = MySSLUtils.createClientSocketFactory(client_keystore_path, PASSWORD);

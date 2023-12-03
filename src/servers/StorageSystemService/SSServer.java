@@ -58,9 +58,29 @@ public class SSServer {
             e.printStackTrace();
         }
     }
+
+    private static void initDirs(){
+        String curDir = System.getProperty("user.dir");
+        for (String user : usernames){
+            String directoryPath = curDir+"/"+user;
+            // Create a File object representing the directory
+            File directory = new File(directoryPath);
+            // Check if the directory doesn't exist, then create it
+            if (!directory.exists()) {
+                boolean success = directory.mkdirs(); // mkdirs() creates parent directories if they don't exist
+                if (success) {
+                    System.out.println("Directory created successfully");
+                } else {
+                    System.err.println("Failed to create directory");
+                }
+            } else {
+                System.out.println("Directory already exists");
+            }
+        }
+    }
+
     public static void main(String[] args) throws Exception {
 
-        System.out.println(InetAddress.getLocalHost().getHostAddress());
 
         System.setProperty("javax.net.ssl.trustStore", SERVER_TRUSTSTORE_PATH);
 

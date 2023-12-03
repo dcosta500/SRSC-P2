@@ -166,10 +166,7 @@ public class AuthenticationServer {
         byte[] finalSendFirstHalf = new byte[finalSend_firstHalf_size];
         ByteBuffer bb = ByteBuffer.wrap(finalSendFirstHalf);
 
-        MySSLUtils.putLengthAndBytes(bb, authId_S2);
-        MySSLUtils.putLengthAndBytes(bb, ktoken1024);
-        MySSLUtils.putLengthAndBytes(bb, tsfBytes);
-
+        MySSLUtils.putLengthAndBytes(bb, authId_S2, ktoken1024, tsfBytes);
         bb.putLong(secureRandom);
         MySSLUtils.putLengthAndBytes(bb, client_ac_symKey_bytes);
 
@@ -181,8 +178,7 @@ public class AuthenticationServer {
         byte[] finalSend = new byte[finalSendLength];
         bb = ByteBuffer.wrap(finalSend);
 
-        MySSLUtils.putLengthAndBytes(bb, finalSendFirstHalfEncrypted);
-        MySSLUtils.putLengthAndBytes(bb, finalSendFirstHalfSigned);
+        MySSLUtils.putLengthAndBytes(bb, finalSendFirstHalfEncrypted, finalSendFirstHalfSigned);
 
         return finalSend;
     }
@@ -201,12 +197,7 @@ public class AuthenticationServer {
         bb = ByteBuffer.wrap(Ktoken1024FirstHalf_bytes);
 
         // Pack First Half of Ktoken1024
-        MySSLUtils.putLengthAndBytes(bb, uidBytes);
-        MySSLUtils.putLengthAndBytes(bb, ipClientBytes);
-        MySSLUtils.putLengthAndBytes(bb, authId_S2);
-        MySSLUtils.putLengthAndBytes(bb, tsI);
-        MySSLUtils.putLengthAndBytes(bb, tsF);
-        MySSLUtils.putLengthAndBytes(bb, client_ac_symKey_bytes);
+        MySSLUtils.putLengthAndBytes(bb, uidBytes, ipClientBytes, authId_S2, tsI, tsF, client_ac_symKey_bytes);
 
         // Second Half
         byte[] signedFirstHalfKtoken1024_S2 = CryptoStuff.sign(privKey, Ktoken1024FirstHalf_bytes);
@@ -217,13 +208,10 @@ public class AuthenticationServer {
         byte[] ktoken1024_plain = new byte[lengthKtoken1024_plain];
         bb = ByteBuffer.wrap(ktoken1024_plain);
 
-        MySSLUtils.putLengthAndBytes(bb, Ktoken1024FirstHalf_bytes);
-        MySSLUtils.putLengthAndBytes(bb, signedFirstHalfKtoken1024_S2);
+        MySSLUtils.putLengthAndBytes(bb, Ktoken1024FirstHalf_bytes, signedFirstHalfKtoken1024_S2);
 
         Key asAcSymmetricKey = CryptoStuff.parseSymKeyFromBase64(System.getProperty("SYM_KEY_AUTH_AC"));
 
-        byte[] ktoken1024 = CryptoStuff.symEncrypt(asAcSymmetricKey, ktoken1024_plain);
-
-        return ktoken1024;
+        return CryptoStuff.symEncrypt(asAcSymmetricKey, ktoken1024_plain);
     }
 }

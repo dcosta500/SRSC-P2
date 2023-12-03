@@ -276,7 +276,7 @@ public abstract class MySSLUtils {
      * Inserts content type {Content.size + Content}
      *
      * @param bb    the bytebuffer
-     * @param array the content to be inserted
+     * @param arrays the content to be inserted
      */
     public static void putLengthAndBytes(ByteBuffer bb, byte[] array) {
         bb.putInt(array.length);

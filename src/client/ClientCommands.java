@@ -145,8 +145,7 @@ public abstract class ClientCommands {
         byte[] dataToSend_S2 = new byte[2 * Integer.BYTES + pubKeyClientBytes_R1.length + srEncryptedBytes_R1.length];
         bb = ByteBuffer.wrap(dataToSend_S2);
 
-        MySSLUtils.putLengthAndBytes(bb, pubKeyClientBytes_R1);
-        MySSLUtils.putLengthAndBytes(bb, srEncryptedBytes_R1);
+        MySSLUtils.putLengthAndBytes(bb, pubKeyClientBytes_R1, srEncryptedBytes_R1);
 
         MySSLUtils.sendData(socket, dataToSend_S2);
 
@@ -245,9 +244,7 @@ public abstract class ClientCommands {
 
         ByteBuffer bb = ByteBuffer.wrap(dataToSend1);
 
-        MySSLUtils.putLengthAndBytes(bb, serviceIDbytes);
-        MySSLUtils.putLengthAndBytes(bb, auth_ktoken1024);
-        MySSLUtils.putLengthAndBytes(bb, clientAuthenticator);
+        MySSLUtils.putLengthAndBytes(bb, serviceIDbytes, auth_ktoken1024, clientAuthenticator);
 
         MySSLUtils.sendData(socket, MySSLUtils.buildPackage(Command.ACCESS, dataToSend1));
 
@@ -285,8 +282,7 @@ public abstract class ClientCommands {
 
             ByteBuffer bb = ByteBuffer.wrap(auth_Client);
 
-            MySSLUtils.putLengthAndBytes(bb, uid_bytes);
-            MySSLUtils.putLengthAndBytes(bb, instant_bytes);
+            MySSLUtils.putLengthAndBytes(bb, uid_bytes, instant_bytes);
             bb.putLong(nonce);
 
             return CryptoStuff.symEncrypt(client_auth_key, auth_Client);

@@ -1,7 +1,16 @@
 package utils;
 
 public enum Command {
-    SUM, MULT, STATS, LOGIN, ACCESS, STORAGE;
+
+    SUM("sum"), MULT("mult"), STATS("stats"),
+    LOGIN("login"), ACCESS("access"),
+    LIST("ls"), PUT("put"), GET("get"), COPY("cp"), REMOVE("rm");
+
+    public String value;
+
+    Command(String value){
+        this.value = value;
+    }
 
     public static Command getCommandFromOrdinal(int ordinal) {
         for (Command c : Command.values()) {
