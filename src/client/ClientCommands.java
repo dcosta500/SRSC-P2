@@ -270,6 +270,7 @@ public abstract class ClientCommands {
         return AccessResponseModel.parse(key_c_service, serviceId_check, timestamp_final, kvToken);
     }
 
+
     // ===== AUX METHODS =====
     private static byte[] createClientAuthenticator(String uid, Key client_auth_key) {
         try {

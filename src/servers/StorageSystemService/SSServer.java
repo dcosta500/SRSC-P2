@@ -5,12 +5,14 @@ import utils.CommonValues;
 import utils.DataPackage;
 import utils.MySSLUtils;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.HashSet;
 import java.util.Properties;
+import java.util.Set;
 
 
 public class SSServer {
@@ -19,11 +21,21 @@ public class SSServer {
     private static final String SERVER_KEYSTORE_PATH = "certs/ssCrypto/keystore_ss.jks";
     private static final String PASSWORD = "ss123456";
     private static final boolean DO_CLIENT_AUTH = true;
+    private static final Set<Long> nonceSet = new HashSet<>();
+    private static final String[] usernames = { "alice", "bob", "carol", "david", "eric" };
 
     private static byte[] executeCommand(Socket socket, DataPackage dp) {
         switch (dp.getCommand()) {
-            case STORAGE:
-                return StorageServiceServer.storage(socket,dp.getContent());
+            case GET:
+                return StorageServiceServer.get(socket,dp.getContent(),nonceSet);
+            case PUT:
+                return StorageServiceServer.put(socket,dp.getContent(),nonceSet);
+            case LIST:
+                return StorageServiceServer.list(socket,dp.getContent(), nonceSet);
+            case REMOVE:
+                return StorageServiceServer.remove(socket,dp.getContent(),nonceSet);
+            case COPY:
+                return StorageServiceServer.copy(socket,dp.getContent(),nonceSet);
             default:
                 return new byte[0];
         }
@@ -54,9 +66,11 @@ public class SSServer {
         try (FileInputStream input = new FileInputStream(curDir + "/configs/storage_server.conf")) {
             props.load(input);
             System.setProperty("SYM_KEY_AC_SS", props.getProperty("SYM_KEY_AC_SS"));
+            System.setProperty("PRIVATE_SYM_KEY", props.getProperty("PRIVATE_SYM_KEY"));
         } catch (IOException e) {
             e.printStackTrace();
         }
+
     }
 
     private static void initDirs(){
@@ -88,6 +102,7 @@ public class SSServer {
 
         ServerSocket ss = MySSLUtils.createServerSocket(CommonValues.SS_PORT_NUMBER, SERVER_KEYSTORE_PATH, PASSWORD,
                 DO_CLIENT_AUTH);
+
 
         while (true) {
             Socket socket;

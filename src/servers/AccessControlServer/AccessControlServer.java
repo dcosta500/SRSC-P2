@@ -27,14 +27,14 @@ public class AccessControlServer {
          * Ktoken1024 = { len+{ len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac } ||
          *              len+{ len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }SIGauth } Kauth,ac
          * Send-1 -> { len+KeyC,Serviço || len+IdServiço || len+TSf || len+KvToken }
-         * Kvtoken = { len+Kc,serive || len+uid || len+IpClient || len+IdClient || len+TSi || len+TSf || len+perms}
+         * Kvtoken = { len + { len+uid || len+IpClient || len+IdService|| ||len+TSi || len+TSf || len+Kc,servive  || len+perms } || len + AssAc(token) }Kac,s
          */
 
         // ===== Receive-1 =====
         // { len+ipClient || len+IdServiço || len+Ktoken1024 || len+AuthClient}
         // AuthClient = { len+IdClient || len+ IpClient || len+TS || NONCE }Kc,AC
         // Ktoken1024 = { len+{ len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac } ||
-        //              len+{ len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }SIGauth } Kauth,ac
+        //  Kvtoken=  {len+{ len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }{len+SIGauth} } Kauth,ac
 
         String ipClient;
         String idService;
@@ -67,6 +67,11 @@ public class AccessControlServer {
         String idClient_auth = new String(idClientB_auth, StandardCharsets.UTF_8);
         Instant timestamp_auth = Instant.parse(new String(timestampB_auth, StandardCharsets.UTF_8));
 
+        if(Instant.now().isAfter(timestamp_auth.plus(Duration.ofSeconds(5)))){
+            System.out.println("Auth Client Expired");
+            return MySSLUtils.buildErrorResponse();
+        }
+
         if (!checkClientAuthenticatorValidity(idClient_token, idClient_auth)) {
             System.out.println("Not matching id");
             return MySSLUtils.buildErrorResponse();
@@ -81,7 +86,7 @@ public class AccessControlServer {
 
         // ===== Send-1 =====
         // { len+KeyC,Serviço || len+IdServiço || len+TSf || len+KvToken }
-        // Kvtoken = { len+Kc,serive || len+uid || len+IpClient || len+IdClient || len+TSi || len+TSf || len+perms}
+        //Kvtoken = {  len+uid || len+IpClient || len+IdService|| ||len+TSi || len+TSf || len+Kc,servive  || len+perms || AssAc(token}Kac,s
 
 
         Instant tsi = Instant.now();
@@ -185,7 +190,7 @@ public class AccessControlServer {
             System.out.println("Permission denied for user");
             return null;
         }
-        //Kvtoken = {  len+uid || len+IpClient || len+IdService|| ||len+TSi || len+TSf || len+Kc,servive  || len+perms || AssAc(token}
+        //Kvtoken = {  len+uid || len+IpClient || len+IdService|| ||len+TSi || len+TSf || len+Kc,servive  || len+perms || AssAc(token}Kac,s
         byte[] kvTokenDecrypted1stPart = new byte[7 * Integer.BYTES + clientSSSymKey_bytes.length + +idClientB.length +
                 ipClientBytes.length + idBytesService.length + tsi.toString().getBytes().length +
                 tsf.toString().getBytes().length + perms.getBytes().length];

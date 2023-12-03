@@ -278,9 +278,11 @@ public abstract class MySSLUtils {
      * @param bb    the bytebuffer
      * @param arrays the content to be inserted
      */
-    public static void putLengthAndBytes(ByteBuffer bb, byte[] array) {
-        bb.putInt(array.length);
-        bb.put(array);
+    public static void putLengthAndBytes(ByteBuffer bb, byte[]... arrays){
+        for(byte[] array : arrays){
+            bb.putInt(array.length);
+            bb.put(array);
+        }
     }
 
     // ===== Debug Methods =====
