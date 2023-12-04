@@ -33,8 +33,12 @@ public class ServiceFilePackage {
          * metadata = { len + path || len + owner || len + TSCreation || len + lastChangedUser || len + TSLastChanged || len + lastReadUser || len + TSLastRead }
          * */
         Key key = CryptoStuff.parseSymKeyFromBase64(System.getProperty("PRIVATE_SYM_KEY"));
+
         byte[] contentDecrypted = CryptoStuff.symDecrypt(key, data);
         ByteBuffer bb = ByteBuffer.wrap(contentDecrypted);
+
+        byte[] fileasWhole = MySSLUtils.getNextBytes(bb);
+        bb = ByteBuffer.wrap(fileasWhole);
 
         byte[] fileContent = MySSLUtils.getNextBytes(bb);
         byte[] signature = MySSLUtils.getNextBytes(bb);
@@ -110,7 +114,7 @@ public class ServiceFilePackage {
     }
 
     public String getMetadata() {
-        return String.format("Metadata -> [ name:%s, owner:%s, createTime:%s, lastEditUser:%s, lastEditTime:%s, lastReadUser:%s, lastReadTime:%s ]",
+        return String.format("Metadata ->  name:%s, owner:%s, createTime:%s, lastEditUser:%s, lastEditTime:%s, lastReadUser:%s, lastReadTime:%s ",
                 path, owner, creationTime, lastWriteUser, lastWriteTime, lastReadUser, lastReadTime);
     }
 

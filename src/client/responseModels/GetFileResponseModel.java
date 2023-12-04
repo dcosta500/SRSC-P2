@@ -2,13 +2,13 @@ package client.responseModels;
 
 public class GetFileResponseModel {
 
-    private String response;
+    private byte[] response;
 
-    public GetFileResponseModel(String response) {
+    public GetFileResponseModel(byte[] response) {
         this.response = response;
     }
 
-    public String getResponse() {
+    public byte[] getResponse() {
         return response;
     }
 }

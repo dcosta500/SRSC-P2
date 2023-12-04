@@ -50,12 +50,6 @@ public class Client {
             System.out.print(USERNAME_LOGGED + "Command -> ");
             String cmd = in.nextLine();
             switch (Command.valueOf(cmd.split(" ")[0].toUpperCase())) {
-                case TEST:
-                    ClientCommands.test(socket);
-                    break;
-                case STATS:
-                    ClientCommands.stats(socket);
-                    break;
                 case LOGIN:
                     login(cmd);
                     break;
@@ -70,6 +64,15 @@ public class Client {
                     break;
                 case LIST:
                     list(cmd);
+                    break;
+                case COPY:
+                    copy(cmd);
+                    break;
+                case FILE:
+                    file(cmd);
+                    break;
+                case REMOVE:
+                    remove(cmd);
                     break;
                 default:
                     break masterLoop;
@@ -130,6 +133,62 @@ public class Client {
         System.out.println(mdm.getResponse());
     }
 
+    private static void copy(String cmd){
+        if (!ClientValidator.copyValidator(cmd)) {
+            System.out.println("Command is not correctly formatted");
+            return;
+        }
+
+        if (ClientTokens.lrm.ktoken1024 == null) {
+            System.out.println("You haven't logged in yet.");
+            return;
+        }
+
+        PutFileResponseModel prm = ClientCommands.copy(socket, ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey,
+                uid, cmd);
+        processPutResponse(prm);
+    }
+
+    private static void remove(String cmd){
+        if (!ClientValidator.putValidator(cmd)) {
+            System.out.println("Command is not correctly formatted");
+            return;
+        }
+
+        if (ClientTokens.lrm.ktoken1024 == null) {
+            System.out.println("You haven't logged in yet.");
+            return;
+        }
+
+        PutFileResponseModel prm = ClientCommands.remove(socket, ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey,
+                uid, cmd);
+        processPutResponse(prm);
+    }
+
+    private static void file(String cmd){
+        if (!ClientValidator.fileValidator(cmd)) {
+            System.out.println("Command is not correctly formatted");
+            return;
+        }
+
+        if (ClientTokens.lrm.ktoken1024 == null) {
+            System.out.println("You haven't logged in yet.");
+            return;
+        }
+
+        FileResponseModel frm = ClientCommands.file(socket, ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey,
+                uid, cmd);
+        processFileResponse(frm);
+    }
+
+    private static void processFileResponse(FileResponseModel frm) {
+        if (frm == null) {
+            return;
+        }
+
+        System.out.println(frm.getResponse());
+    }
+
     private static void put(String cmd) {
         if (!ClientValidator.putValidator(cmd)) {
             System.out.println("Command is not correctly formatted");
@@ -175,7 +234,7 @@ public class Client {
         if (gfm == null) {
             return;
         }
-        System.out.println(gfm.getResponse());
+        System.out.println("Download file");
     }
 
     private static void list(String cmd) {
@@ -203,7 +262,7 @@ public class Client {
         if (lrm == null) {
             return;
         }
-        System.out.println(lrm.getFiles());
+        System.out.print(lrm.getFiles());
     }
 
     private static void processClientConfFile() {

@@ -70,8 +70,8 @@ public class StorageServiceServer {
             for (Path entry : directoryStream) {
                 directories = directories.concat((Files.isDirectory(entry) ? "dir -- " : "file - ") + entry.getFileName() + "\n");
             }
-            System.out.println(Arrays.toString(directoriesList.toArray(String[]::new)));
-            response = Arrays.toString(directoriesList.toArray(String[]::new)).getBytes();
+            System.out.println(directories);
+            response = directories.getBytes();
         } catch (Exception e) {
             System.out.println("Error while trying to list directories.");
             System.err.println("directory: " + directory);
@@ -143,8 +143,6 @@ public class StorageServiceServer {
             return MySSLUtils.buildErrorResponse();
         }
 
-
-        System.out.println(Base64.getEncoder().encodeToString(fileContent));
 
         if (!Files.exists(directory.getParent()) || !Files.isDirectory(directory.getParent())) {
             System.out.println("Directory does not exist.");
@@ -252,6 +250,7 @@ public class StorageServiceServer {
         byte[] receivedContent = receiveRequest(Command.COPY, mdSocket, content, nonceSet);
         System.out.println("Left received request");
         if (receivedContent == null) {
+            System.out.println("Error");
             return MySSLUtils.buildErrorResponse();
         }
 
@@ -282,6 +281,7 @@ public class StorageServiceServer {
 
         byte[] encryptedFile;
         ServiceFilePackage fileRead;
+
         try {
             encryptedFile = Files.readAllBytes(file);
             fileRead = new ServiceFilePackage(encryptedFile);
@@ -321,14 +321,20 @@ public class StorageServiceServer {
 
         ByteBuffer bb = ByteBuffer.wrap(receivedContent);
         byte[] userIdBytes = MySSLUtils.getNextBytes(bb);
+        String username = new String(userIdBytes, StandardCharsets.UTF_8);
         byte[] clientServiceKeyBytes = MySSLUtils.getNextBytes(bb);
         byte[] arguments = MySSLUtils.getNextBytes(bb);
+
+        // Unpack arguments and nonce
+        bb = ByteBuffer.wrap(arguments);
+        String userPath = new String(MySSLUtils.getNextBytes(bb));
+        String path = new String(MySSLUtils.getNextBytes(bb));
         long nonce2 = bb.getLong();
 
         // arguments = len + username || len + path
         bb = ByteBuffer.wrap(arguments);
-        String username = new String(MySSLUtils.getNextBytes(bb));
-        Path filePath = Paths.get(DEFAULT_DIR + "/" + username + "/" + new String(MySSLUtils.getNextBytes(bb)));
+
+        Path filePath = Paths.get(DEFAULT_DIR + "/" + userPath + "/" + path);
         try {
             Files.delete(filePath);
         } catch (NoSuchFileException e) {
@@ -343,7 +349,7 @@ public class StorageServiceServer {
         }
 
         Key clientServiceKey = CryptoStuff.parseSymKeyFromBytes(clientServiceKeyBytes);
-        byte[] response = new byte[0];
+        byte[] response = "File deleted".getBytes();
 
         // ===== SEND 2 =====
         // { len + { len + Response || Nonce }Kc,s }
@@ -425,21 +431,22 @@ public class StorageServiceServer {
     }
 
     public static byte[] file(Socket mdSocket, byte[] content, Set<Long> nonceSet) {
-        byte[] receivedContent = receiveRequest(Command.FILECMD, mdSocket, content, nonceSet);
+        byte[] receivedContent = receiveRequest(Command.LIST, mdSocket, content, nonceSet);
         if (receivedContent == null) {
             return MySSLUtils.buildErrorResponse();
         }
 
         ByteBuffer bb = ByteBuffer.wrap(receivedContent);
         byte[] userIdBytes = MySSLUtils.getNextBytes(bb);
+        String username = new String(userIdBytes, StandardCharsets.UTF_8);
         byte[] clientServiceKeyBytes = MySSLUtils.getNextBytes(bb);
         byte[] arguments = MySSLUtils.getNextBytes(bb);
-        long nonce2 = bb.getLong();
-        // arguments = len + username || len + path/file
+
+        // Unpack arguments and nonce
         bb = ByteBuffer.wrap(arguments);
         String userPath = new String(MySSLUtils.getNextBytes(bb));
-        String username = Arrays.toString(userIdBytes);
         String path = new String(MySSLUtils.getNextBytes(bb));
+        long nonce2 = bb.getLong();
 
         Key clientServiceKey = CryptoStuff.parseSymKeyFromBytes(clientServiceKeyBytes);
 
@@ -554,8 +561,9 @@ public class StorageServiceServer {
 
         // ===== RECEIVE 2 =====
         // { len + IPClient || len + { len + arguments || Nonce }Kc,s }
+        byte[] receive2;
 
-        byte[] receive2 = MySSLUtils.receiveData(mdSocket);
+        receive2 = MySSLUtils.receiveData(mdSocket);
         bb = ByteBuffer.wrap(receive2);
 
         byte[] ipClient2 = MySSLUtils.getNextBytes(bb);

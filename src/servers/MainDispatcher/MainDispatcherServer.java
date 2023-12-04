@@ -44,12 +44,8 @@ public class MainDispatcherServer {
     private static byte[] executeCommand(Socket socket, DataPackage dp) {
         System.out.println("Executing command...");
         switch (dp.getCommand()) {
-            case TEST:
-                return MainDispatcher.test(socket, dp.getContent());
             case LOGIN:
                 return MainDispatcher.login(socket, dp.getContent());
-            case STATS:
-                return MainDispatcher.clientStats(socket, dp.getContent());
             case ACCESS:
                 return MainDispatcher.access(socket, dp.getContent());
             case MKDIR:
@@ -60,6 +56,12 @@ public class MainDispatcherServer {
                 return MainDispatcher.get(socket,dp.getContent());
             case LIST:
                 return MainDispatcher.list(socket,dp.getContent());
+            case FILE:
+                return MainDispatcher.file(socket,dp.getContent());
+            case COPY:
+                return MainDispatcher.copy(socket,dp.getContent());
+            case REMOVE:
+                return MainDispatcher.remove(socket,dp.getContent());
             default:
                 return new byte[0];
         }

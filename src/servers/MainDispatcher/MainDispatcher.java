@@ -84,46 +84,32 @@ public class MainDispatcher {
     }
 
     public static byte[] makedir(Socket clientSocket, byte[] content){
-        return executeReadCommand(clientSocket,content,Command.MKDIR);
+        return executeCommand(clientSocket,content,Command.MKDIR);
     }
     public static byte[] put(Socket clientSocket, byte[] content){
-        return executeWriteCommand(clientSocket,content,Command.PUT);
+        return executeCommand(clientSocket,content,Command.PUT);
     }
     public static byte[] get(Socket clientSocket, byte[] content){
-        return executeReadCommand(clientSocket,content,Command.GET);
+        return executeCommand(clientSocket,content,Command.GET);
     }
     public static byte[] list(Socket clientSocket, byte[] content){
-        return executeReadCommand(clientSocket,content,Command.LIST);
+        return executeCommand(clientSocket,content,Command.LIST);
+    }
+    public static byte[] file(Socket clientSocket, byte[] content){
+        return executeCommand(clientSocket,content,Command.FILE);
+    }
+
+    public static byte[] copy(Socket clientSocket, byte[] content){
+        return executeCommand(clientSocket,content,Command.COPY);
+    }
+    public static byte[] remove(Socket clientSocket, byte[] content){
+        return executeCommand(clientSocket,content,Command.REMOVE);
     }
 
     // ===== Aux Methods =====
-    private static byte[] executeReadCommand(Socket clientSocket, byte[] content, Command command){
-        //===== Send 1 from ss =====
-        byte[] dataToSend_S2 = addClientIPToBeggining(clientSocket, content);
-        SSLSocket ssSocket = startConnectiontoSSServer();
-        MySSLUtils.sendData(ssSocket, MySSLUtils.buildPackage(command, dataToSend_S2));
 
-        //===== Receive 2 from ss =====
-        content = MySSLUtils.receiveData(ssSocket);
 
-        // ===== Send 2 to client =====
-        MySSLUtils.sendData(clientSocket, content);
-
-        //===== Receive 3 from client =====
-        content = MySSLUtils.receiveData(clientSocket);
-
-        // ===== Send 3 to SS =====
-        byte[] dataToSend_S3 = addClientIPToBeggining(clientSocket, content);
-        MySSLUtils.sendData(ssSocket, dataToSend_S3);
-
-        //===== Receive 4 from SS ====
-        content = MySSLUtils.receiveData(ssSocket);
-        MySSLUtils.closeConnectionToServer(ssSocket);
-        // ===== Send 4 to client =====
-        return content;
-    }
-
-    private static byte[] executeWriteCommand(Socket clientSocket, byte[] content, Command command){
+    private static byte[] executeCommand(Socket clientSocket, byte[] content, Command command){
         //===== Send 1 to ss =====
         byte[] dataToSend_S2 = addClientIPToBeggining(clientSocket, content);
         SSLSocket ssSocket = startConnectiontoSSServer();
@@ -138,11 +124,11 @@ public class MainDispatcher {
         // arguments
 
         //===== Receive 3 from client =====
-        content = MySSLUtils.receiveFile(clientSocket);
+        content = MySSLUtils.receiveData(clientSocket);
 
         // ===== Send 3 to SS ===== (args)
         byte[] dataToSend_S3 = addClientIPToBeggining(clientSocket, content);
-        MySSLUtils.sendFile(ssSocket, dataToSend_S3);
+        MySSLUtils.sendData(ssSocket, dataToSend_S3);
 
         //===== Receive 4 from SS ====
         content = MySSLUtils.receiveData(ssSocket);
