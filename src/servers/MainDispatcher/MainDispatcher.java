@@ -166,14 +166,8 @@ public class MainDispatcher {
         byte[] dataToSend_S3 = addClientIPToBeggining(clientSocket, content);
         MySSLUtils.sendData(ssSocket, dataToSend_S3);
 
-        // ====== Signal to send ======
-        byte[] signalToSend = MySSLUtils.receiveData(ssSocket);
-        MySSLUtils.sendData(clientSocket, signalToSend);
-
         // ===== Client file =====
         byte[] fileBytes = MySSLUtils.receiveFile(clientSocket);
-
-        System.out.println(Base64.getEncoder().encodeToString(fileBytes));
 
         // ==== SS Send file ====
         MySSLUtils.sendFile(ssSocket, fileBytes);

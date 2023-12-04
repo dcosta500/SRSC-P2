@@ -360,10 +360,6 @@ public abstract class ClientCommands {
             System.out.println("Morreram todos");
         }
 
-        // wait for signal
-        byte[] signalToSend = MySSLUtils.receiveData(socket);
-        System.out.println("Signal to send len: " + signalToSend.length);
-
         MySSLUtils.sendFile(socket, sendFile);
 
         // ===== RECEIVE 3 =====
