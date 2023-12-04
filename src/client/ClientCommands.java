@@ -340,32 +340,57 @@ public abstract class ClientCommands {
         // ===== SEND 3 =====
         //{ len + { len + arguments || Nonce }Kc,s }
         long nonce = CryptoStuff.getRandom();
-        sendArguments(socket, ClientTokens.arm, cmdArgs, nonce);
         String[] args = cmdArgs.split(" ");
 
         //==== Prepare file to send ====
         Path pathToFile = Paths.get(DEFAULT_PUT_DIR).resolve(uid).resolve(args[2]);
         byte[] sendFile = null;
         try {
-            byte[] fileBytes = Files.readAllBytes(pathToFile);
-            byte[] encryptedFile = CryptoStuff.symEncrypt(ClientTokens.arm.clientService_key, fileBytes);
-
-            System.out.println(encryptedFile.length);
-
-            sendFile = new byte[Integer.BYTES + encryptedFile.length];
-            ByteBuffer bb = ByteBuffer.wrap(sendFile);
-
-            MySSLUtils.putLengthAndBytes(bb, encryptedFile);
+            sendFile = Files.readAllBytes(pathToFile);
+            System.out.println(Base64.getEncoder().encodeToString(sendFile));
         } catch (Exception e) {
             System.out.println("Morreram todos");
         }
+        sendFileAndArguments(socket, ClientTokens.arm, cmdArgs, nonce,sendFile);
 
-        MySSLUtils.sendFile(socket, sendFile);
+
 
         // ===== RECEIVE 3 =====
         // Receive-3 -> { len +  { len + response || Nonce }Kc,s }
         return receiveResponse(socket, nonce);
     }
+
+    private static void sendFileAndArguments(SSLSocket socket, AccessResponseModel arm, String cmdArgs, long nonce, byte[] file){
+        // mkdir username path
+        // ["mkdir", "username path"]
+        String[] cmdArgsNoCommand = cmdArgs.split(" ", 2);
+        String[] arguments = cmdArgsNoCommand[1].split(" ");
+
+        int argNonceSize = 0;
+        for (String arg : arguments) {
+            argNonceSize += Integer.BYTES + arg.getBytes().length;
+        }
+        argNonceSize+= Integer.BYTES + file.length;
+        argNonceSize += Long.BYTES;
+
+        byte[] argNonce = new byte[argNonceSize];
+        ByteBuffer bb = ByteBuffer.wrap(argNonce);
+
+        for (String arg : arguments) {
+            MySSLUtils.putLengthAndBytes(bb, arg.getBytes());
+        }
+        bb.putLong(nonce);
+        MySSLUtils.putLengthAndBytes(bb,file);
+
+        byte[] argNonceEncrypted = CryptoStuff.symEncrypt(arm.clientService_key, argNonce);
+
+        byte[] dataToSend3 = new byte[Integer.BYTES + argNonceEncrypted.length];
+        bb = ByteBuffer.wrap(dataToSend3);
+
+        MySSLUtils.putLengthAndBytes(bb, argNonceEncrypted);
+        MySSLUtils.sendFile(socket, dataToSend3);
+    }
+
 
     private static void sendArguments(SSLSocket socket, AccessResponseModel arm, String cmdArgs, long nonce) {
         // mkdir username path

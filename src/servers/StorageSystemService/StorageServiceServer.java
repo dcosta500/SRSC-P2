@@ -116,6 +116,8 @@ public class StorageServiceServer {
         String userPath = new String(MySSLUtils.getNextBytes(bb));
         String path = new String(MySSLUtils.getNextBytes(bb));
         long nonce = bb.getLong();
+        byte[] fileContent = MySSLUtils.getNextBytes(bb);
+
 
         // Command Logic
         String directoryPath = DEFAULT_DIR + "/" + userPath + "/" + path;
@@ -123,18 +125,16 @@ public class StorageServiceServer {
 
         Key clientServiceKey = CryptoStuff.parseSymKeyFromBytes(clientServiceKeyBytes);
 
-        byte[] fileEncryptedWithlen = MySSLUtils.receiveFile(mdSocket);
-        bb = ByteBuffer.wrap(fileEncryptedWithlen);
 
-        byte[] fileEncrypted = MySSLUtils.getNextBytes(bb);
 
-        if(fileEncrypted.length == 0){
+
+        if(fileContent.length == 0){
             System.out.println("Could not receive file properly.");
             return MySSLUtils.buildErrorResponse();
         }
 
-        byte[] fileContent = CryptoStuff.symDecrypt(clientServiceKey, fileEncrypted);
-        System.out.println(Base64.getEncoder().encodeToString(fileEncryptedWithlen));
+
+        System.out.println(Base64.getEncoder().encodeToString(fileContent));
 
         if (!Files.exists(directory.getParent()) || !Files.isDirectory(directory.getParent())) {
             System.out.println("Directory does not exist.");

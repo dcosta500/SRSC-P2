@@ -140,7 +140,7 @@ public class MainDispatcher {
 
         //===== Receive 4 from SS ====
         content = MySSLUtils.receiveData(ssSocket);
-
+        MySSLUtils.closeConnectionToServer(ssSocket);
         // ===== Send 4 to client =====
         return content;
     }
@@ -160,17 +160,11 @@ public class MainDispatcher {
         // arguments
 
         //===== Receive 3 from client =====
-        content = MySSLUtils.receiveData(clientSocket);
+        content = MySSLUtils.receiveFile(clientSocket);
 
         // ===== Send 3 to SS ===== (args)
         byte[] dataToSend_S3 = addClientIPToBeggining(clientSocket, content);
-        MySSLUtils.sendData(ssSocket, dataToSend_S3);
-
-        // ===== Client file =====
-        byte[] fileBytes = MySSLUtils.receiveFile(clientSocket);
-
-        // ==== SS Send file ====
-        MySSLUtils.sendFile(ssSocket, fileBytes);
+        MySSLUtils.sendFile(ssSocket, dataToSend_S3);
 
         //===== Receive 4 from SS ====
         content = MySSLUtils.receiveData(ssSocket);
