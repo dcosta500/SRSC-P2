@@ -123,7 +123,7 @@ public class ServiceFilePackage {
         // Metadata
         byte[] pathBytes = path.getBytes();
         byte[] ownerBytes = owner.getBytes();
-        byte[] tsCreation = Instant.now().toString().getBytes();
+        byte[] tsCreation = now.toString().getBytes();
         byte[] writeAuthorBytes = owner.getBytes(); // Changed
         byte[] tsLastChangedBytes = now.toString().getBytes();// Changed
         byte[] lastReadUserBytes = owner.getBytes();
@@ -156,8 +156,8 @@ public class ServiceFilePackage {
         byte[] tsCreation = oldFile.getCreationTime().toString().getBytes();
         byte[] writeAuthorBytes = writeAuthor.getBytes(); // Changed
         byte[] tsLastChangedBytes = Instant.now().toString().getBytes(); // Changed
-        byte[] lastReadUserBytes = oldFile.getLastReadUser().getBytes();
-        byte[] tsLastReadBytes = oldFile.getLastReadTime().toString().getBytes();
+        byte[] lastReadUserBytes = Instant.now().toString().getBytes();
+        byte[] tsLastReadBytes = Instant.now().toString().getBytes();
 
         byte[] metadata = constructMetadata(pathBytes, ownerBytes, tsCreation, writeAuthorBytes, tsLastChangedBytes, lastReadUserBytes, tsLastReadBytes);
 

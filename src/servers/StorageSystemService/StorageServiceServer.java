@@ -111,7 +111,7 @@ public class StorageServiceServer {
          * */
 
         // ===== RECEIVE-SEND-1 & RECEIVE-2 =====
-        byte[] receivedContent = receiveRequest(Command.MKDIR, mdSocket, content, nonceSet);
+        byte[] receivedContent = receiveRequest(Command.PUT, mdSocket, content, nonceSet);
         if (receivedContent == null) {
             return MySSLUtils.buildErrorResponse();
         }
@@ -135,9 +135,6 @@ public class StorageServiceServer {
         Path directory = Paths.get(directoryPath);
 
         Key clientServiceKey = CryptoStuff.parseSymKeyFromBytes(clientServiceKeyBytes);
-
-
-
 
         if(fileContent.length == 0){
             System.out.println("Could not receive file properly.");
@@ -215,6 +212,7 @@ public class StorageServiceServer {
             System.err.println("File does not exist");
             return MySSLUtils.buildErrorResponse();
         }
+
         byte[] encryptedFile;
         ServiceFilePackage fileRead;
         try {
@@ -231,7 +229,6 @@ public class StorageServiceServer {
             return MySSLUtils.buildErrorResponse();
         }
         byte[] response = fileRead.getContent();
-
 
         // ===== SEND 2 =====
         // { len + { len + Response || Nonce }Kc,s }

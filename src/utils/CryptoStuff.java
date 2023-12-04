@@ -12,6 +12,8 @@ import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Signature;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.Random;
@@ -381,6 +383,23 @@ public abstract class CryptoStuff {
                 return (PrivateKey) key;
         } catch (Exception e) {
             System.out.println("Could not retrieve private key from truststore.");
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public static PublicKey getPublicKeyFromCertificate(String alias, String certificatePath,
+                                                        String keystorePassword){
+        try {
+            // Load the certificate file
+            FileInputStream fis = new FileInputStream(certificatePath);
+            CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
+            Certificate certificate = certificateFactory.generateCertificate(fis);
+            fis.close();
+
+            return certificate.getPublicKey();
+        } catch (Exception e) {
+            System.out.println("Could not retrieve public key from keystore.");
             e.printStackTrace();
         }
         return null;
