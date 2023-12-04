@@ -6,6 +6,7 @@ import java.security.Key;
 import java.security.KeyPair;
 import java.security.PublicKey;
 import java.time.Instant;
+import java.util.Base64;
 import javax.net.ssl.SSLSocket;
 
 import client.responseModels.AccessResponseModel;
@@ -234,13 +235,16 @@ public abstract class ClientCommands {
          * Send-1-> { len+IdService || len+token1024 || len+AuthClient}
          * AuthClient = {len+IdClient || len+ IpClient || len+TS || NOUNCE}Kc,AC
          * Receive-1 -> { len+Kc,service || len+IdService || len+TSf || len+KvToken }Kc,ac
+         *
+         * Ktoken1024 = { len + Ktoken1024_content || len + { Ktoken1024_content }SIGauth }Kauth,ac
+         * Ktoken1024_content = { len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }
          */
 
         // ===== Send-1 =====
         // { len+IdServiço || len+token1024 || len+AuthClient}
         // AuthClient = {len+IdClient || len+ IpClient || len+TS || NOUNCE}Kc,AC
 
-        //Creating of Auth Client encrypted with Access control key
+        // Creating of Auth Client encrypted with Access control key
         byte[] serviceIDbytes = CommonValues.STORAGE_SERVICE_ID.getBytes();
         byte[] clientAuthenticator = createClientAuthenticator(uid, client_auth_key);
 
@@ -255,7 +259,6 @@ public abstract class ClientCommands {
 
         // ===== Receive-1 =====
         // { len+Kc,service || len+IdService || len+TSf || len+KvToken }Kc,ac
-
         byte[] dataToReceive_R1 = MySSLUtils.receiveData(socket);
         ResponsePackage rp = ResponsePackage.parse(dataToReceive_R1);
 
@@ -294,6 +297,9 @@ public abstract class ClientCommands {
          *
          * Kvtoken = { len + { len + kvtoken_content || len + SIGac( kvtoken_content ) } Kac,s }
          * kvtoken_content = { len + uid || len + IpClient || len + IdService || len + TSi || len + TSf || len + Kc,s  || len + perms }
+         *
+         * Ktoken1024 = { len + Ktoken1024_content || len + { Ktoken1024_content }SIGauth }Kauth,ac
+         * Ktoken1024_content = { len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }
          */
 
         // ===== ACCESS =====
@@ -304,6 +310,8 @@ public abstract class ClientCommands {
             System.out.println("Could not retrieve from Access Control");
             return null;
         }
+
+        System.out.printf("kvtoken: %s\n", Base64.getEncoder().encodeToString(arm.kvtoken));
 
         // ===== AUTHENTICATE SERVICE =====
         if (!authenticateService(socket, arm, client_auth_key, uid)) {

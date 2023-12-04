@@ -132,6 +132,32 @@ public class MainDispatcher {
         return executeCommand(clientSocket,content,Command.MKDIR);
     }
 
+    public static byte[] access(Socket clientSocket, byte[] content) {
+        /*
+         * Data flow (basically add client ip before redirecting to auth server):
+         * Receive-1: { len+IdService || len+token1024 || len+AuthClient}
+         * Send-1: { len+IPclient || len+IdService || len+token1024 || len+AuthClient}
+         * Receive-2: dont care
+         * Send-2: redirect
+         */
+
+        // ===== Receive-1 from client =====
+        // ...
+
+        // ===== Send-1 to ac =====
+        SSLSocket acSocket = startConnectionToACServer();
+        byte[] dataToSend_S1 = addClientIPToBeggining(clientSocket, content);
+        MySSLUtils.sendData(acSocket, MySSLUtils.buildPackage(Command.ACCESS, dataToSend_S1));
+
+        // ===== Receive-2 from ac =====
+        content = MySSLUtils.receiveData(acSocket);
+
+        // ===== Send-2 to client =====
+        MySSLUtils.closeConnectionToServer(acSocket);
+        return content;
+    }
+
+    // ===== Aux Methods =====
     private static byte[] executeCommand(Socket clientSocket, byte[] content, Command command){
 
         access(clientSocket, content);
@@ -163,32 +189,6 @@ public class MainDispatcher {
         return content;
     }
 
-    public static void access(Socket clientSocket, byte[] content) {
-        /*
-         * Data flow (basically add client ip before redirecting to auth server):
-         * Receive-1: { len+IdService || len+token1024 || len+AuthClient}
-         * Send-1: { len+IPclient || len+IdService || len+token1024 || len+AuthClient}
-         * Receive-2: dont care
-         * Send-2: redirect
-         */
-
-        // ===== Receive-1 from client =====
-        // ...
-
-        // ===== Send-1 to ac =====
-        SSLSocket acSocket = startConnectionToACServer();
-        byte[] dataToSend_S1 = addClientIPToBeggining(clientSocket, content);
-        MySSLUtils.sendData(acSocket, MySSLUtils.buildPackage(Command.ACCESS, dataToSend_S1));
-
-        // ===== Receive-2 from ac =====
-        content = MySSLUtils.receiveData(acSocket);
-
-        // ===== Send-2 to client =====
-        MySSLUtils.closeConnectionToServer(acSocket);
-        MySSLUtils.sendData(clientSocket, content);
-    }
-
-    // ===== Aux Methods =====
     private static byte[] addClientIPToBeggining(Socket clientSocket, byte[] content) {
         byte[] ipClientBytes = getClientIPAddress(clientSocket).getBytes();
         byte[] data = new byte[Integer.BYTES + ipClientBytes.length + content.length];
