@@ -1,5 +1,6 @@
 package client;
 
+import javax.net.ServerSocketFactory;
 import javax.net.ssl.*;
 
 import client.responseModels.LoginResponseModel;
@@ -71,7 +72,7 @@ public class Client {
                     login(cmd);
                     break;
                 case MKDIR:
-                    makedir(cmd);
+                    makedir(cmd,factory);
                     break;
                 default:
                     break masterLoop;
@@ -135,7 +136,7 @@ public class Client {
         client_ss_key = arm.clientService_key;
     }*/
 
-    private static void makedir(String cmd) {
+    private static void makedir(String cmd, SSLSocketFactory factory) {
         if (!ClientValidator.makedirValidator(cmd)){
             System.out.println("Command is not correctly formatted");
             return;
@@ -146,7 +147,7 @@ public class Client {
             return;
         }
 
-        MakedirResponseModel mdm = ClientCommands.mkdir(socket, auth_ktoken1024, null, client_ac_key, uid, cmd);
+        MakedirResponseModel mdm = ClientCommands.mkdir(socket, auth_ktoken1024, null, client_ac_key,uid, cmd, factory);
         processMakedirResponse(mdm);
     }
 

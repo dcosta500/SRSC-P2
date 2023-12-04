@@ -16,19 +16,19 @@ import java.util.*;
 
 public class StorageServiceServer {
     private static final String DEFAULT_DIR = System.getProperty("user.dir") + "/data";
+    /* *
+     * Data flow:
+     * Receive-1 -> { len + IPClient || len + KvToken || len + AuthClient2 || R }
+     * AuthClient2 = { len + { len + IDClient || len + TS || Nonce }Kc,s }
+     * Kvtoken = { len + { len + uid || len + IpClient || len + IdService || len + TSi || len + TSf || len + Kc,s  || len + perms ||
+     *               SIGac(len + uid || len + IpClient || len + IdService || len + TSi || len + TSf || len + Kc,s  || len + perms) } Kac,s }
+     *
+     * Send-1 -> { { R }Kc,s }
+     * Receive-2 -> { len + IPClient || { len + arguments || Nonce }Kc,s }
+     * Send-2 -> { len + { len + Response || Nonce }Kc,s }
+     * */
 
     public static byte[] list(Socket mdSocket, byte[] content, Set<Long> nonceSet) {
-        /* *
-         * Data flow:
-         * Receive-1 -> { len + IPClient || len + KvToken || len + AuthClient2 || R }
-         * AuthClient2 = { len + { len + IDClient || len + TS || Nonce }Kc,s }
-         * Kvtoken = { len + { len + uid || len + IpClient || len + IdService || len + TSi || len + TSf || len + Kc,s  || len + perms ||
-         *               SIGac(len + uid || len + IpClient || len + IdService || len + TSi || len + TSf || len + Kc,s  || len + perms) } Kac,s }
-         *
-         * Send-1 -> { len + { R }Kc,s }
-         * Receive-2 -> { len + IPClient || { len + arguments || Nonce }Kc,s }
-         * Send-2 -> { len + { len + Response || Nonce }Kc,s }
-         * */
 
         // len + clientServiceKey.Encoded || len + arguments || nonce
         byte[] receivedContent = receiveRequest(Command.LIST, mdSocket, content, nonceSet);
@@ -360,20 +360,12 @@ public class StorageServiceServer {
         String directoryPath = DEFAULT_DIR + "/" + userPath + "/" + path;
         Path directory = Paths.get(directoryPath);
         byte[] response;
-
-        if (Files.exists(directory.getParent())) {
-            try {
-                Files.createDirectories(directory); // createDirectories() creates parent directories if they don't exist
-                response = "Directory created successfully".getBytes();
-            } catch (IOException e) {
-                response = ("Failed to create directory: " + e.getMessage()).getBytes();
-                System.err.println("Failed to create directory: " + e.getMessage());
-                System.out.println("userPath: " + userPath);
-                System.out.println("path: " + path);
-            }
-        } else {
-            response = "Directory parent does not exist".getBytes();
-            System.out.println("Directory parent does not exist");
+        try {
+            Files.createDirectories(directory); // createDirectories() creates parent directories if they don't exist
+            response = "Directory created successfully".getBytes();
+        } catch (IOException e) {
+            System.out.println("Failed to create directory.");
+            return MySSLUtils.buildErrorResponse();
         }
 
         // ===== SEND 2 =====
@@ -392,8 +384,6 @@ public class StorageServiceServer {
         bb = ByteBuffer.wrap(dataToSend);
 
         MySSLUtils.putLengthAndBytes(bb, responseEncrypted);
-
-
         return MySSLUtils.buildResponse(CommonValues.OK_CODE, dataToSend);
     }
 
@@ -452,8 +442,16 @@ public class StorageServiceServer {
         return MySSLUtils.buildResponse(CommonValues.OK_CODE, dataToSend);
     }
 
+
     // ===== AUX METHODS =====
     private static byte[] receiveRequest(Command command, Socket mdSocket, byte[] content, Set<Long> nonceSet) {
+        /* *
+         * Data flow:
+         * Receive-1 -> { len + IPClient || len + KvToken || len + AuthClient2 || R }
+         * AuthClient2 = { len + { len + IDClient || len + TS || Nonce }Kc,s }
+         * Kvtoken = { len + { len + uid || len + IpClient || len + IdService || len + TSi || len + TSf || len + Kc,s  || len + perms ||
+         *               SIGac(len + uid || len + IpClient || len + IdService || len + TSi || len + TSf || len + Kc,s  || len + perms) } Kac,s }
+         * */
         // ===== RECEIVE 1 =====
         ByteBuffer bb = ByteBuffer.wrap(content);
         byte[] ipClient = MySSLUtils.getNextBytes(bb);
@@ -542,7 +540,12 @@ public class StorageServiceServer {
         return dataReceived;
     }
 
-    private static boolean checkAuth(byte[] authClient2, Set<Long> nonceSet, byte[] idClient, byte[] ipClient, byte[] ipClientToken, Instant timestampFinal) {
+    private static boolean checkAuth(Key key_client_service, byte[] authClient2Encrypted, Set<Long> nonceSet, byte[] idClient,
+                                     byte[] ipClient, byte[] ipClientToken, Instant timestampFinal) {
+
+        // AuthClient = { len + IdClient || len + TS || Nonce }Kc,ss
+        byte[] authClient2 = CryptoStuff.symDecrypt(key_client_service, authClient2Encrypted);
+
         ByteBuffer bb = ByteBuffer.wrap(authClient2);
 
         byte[] idClientAuth = MySSLUtils.getNextBytes(bb);
@@ -555,13 +558,13 @@ public class StorageServiceServer {
         }
         nonceSet.add(nonce);
 
-        if (Arrays.equals(idClientAuth, idClient) && Arrays.equals(ipClientToken, ipClient)) {
+        if (!Arrays.equals(idClientAuth, idClient) || !Arrays.equals(ipClientToken, ipClient)) {
             System.out.println("idClientFromToken and idClientFromAuth didn't match");
             return false;
         }
 
         Instant now = Instant.now();
-        if (now.isAfter(timeStampAuth.plus(Duration.ofSeconds(5))) && now.isAfter(timestampFinal)) {
+        if (now.isAfter(timeStampAuth.plus(Duration.ofSeconds(5))) || now.isAfter(timestampFinal)) {
             System.out.println("Auth Client Expired");
             return false;
         }

@@ -225,8 +225,8 @@ public abstract class ClientCommands {
         System.out.println("Ip: " + new String(ipAddBytes, StandardCharsets.UTF_8));
     }
 
-    public static MakedirResponseModel mkdir(SSLSocket socket, byte[] auth_ktoken1024, AccessResponseModel arm, Key client_auth_key, String uid, String cmdArgs) {
-        String response = executeReadCommand(socket, auth_ktoken1024, arm, client_auth_key, uid, cmdArgs);
+    public static MakedirResponseModel mkdir(SSLSocket socket, byte[] auth_ktoken1024, AccessResponseModel arm, Key client_auth_key, String uid, String cmdArgs, SSLSocketFactory factory) {
+        String response = executeReadCommand(socket, auth_ktoken1024, arm, client_auth_key, uid, cmdArgs, factory);
         return new MakedirResponseModel(response);
     }
 
@@ -287,7 +287,8 @@ public abstract class ClientCommands {
         return AccessResponseModel.parse(key_c_service, serviceId_check, timestamp_final, kvToken);
     }
 
-    private static String executeReadCommand(SSLSocket socket, byte[] auth_ktoken1024, AccessResponseModel arm, Key client_auth_key, String uid, String cmdArgs){
+    private static String executeReadCommand(SSLSocket socket, byte[] auth_ktoken1024, AccessResponseModel arm,
+                                             Key client_auth_key, String uid, String cmdArgs, SSLSocketFactory factory) {
         /* Data Flow:
          * Send-1 -> { len + IDservice || len + Ktoken1024 || len + AUTHclient1 }
          * Receive-1 -> { len + Kc,s || len + IDservice || len + TSf || len + Kvtoken }Kc,Ac
@@ -310,7 +311,8 @@ public abstract class ClientCommands {
         // ===== ACCESS =====
         SSLSocket acSocket = startConnectionToMDServer(factory);
         if (arm == null)
-            arm = access(socket, auth_ktoken1024, client_auth_key, uid);
+            arm = access(acSocket, auth_ktoken1024, client_auth_key, uid);
+        MySSLUtils.closeConnectionToServer(acSocket);
 
         if (arm == null) {
             System.out.println("Could not retrieve from Access Control");
@@ -320,7 +322,7 @@ public abstract class ClientCommands {
         System.out.println("Access Control with success.");
 
         // ===== AUTHENTICATE SERVICE =====
-        if (!authenticateService(socket, arm, client_auth_key, uid)) {
+        if (!authenticateService(socket, arm, arm.clientService_key, uid)) {
             System.out.println("Could not authenticate service server.");
             return null;
         }
@@ -421,7 +423,6 @@ public abstract class ClientCommands {
 
         bb = ByteBuffer.wrap(rChallengeResponseDecrypted);
         long rChallengeResponseLong = bb.getLong();
-
         if (rChallengeResponseLong != rChallenge) {
             System.out.println("Service could not respond to challenge");
             return false;
@@ -443,8 +444,7 @@ public abstract class ClientCommands {
 
             MySSLUtils.putLengthAndBytes(bb, uid_bytes, instant_bytes);
             bb.putLong(nonce);
-
-            return CryptoStuff.symEncrypt(client_auth_key, auth_Client);
+            return CryptoStuff.symEncrypt(key, auth_Client);
         } catch (Exception e) {
             System.out.println("Could not create client's authenticator.");
             e.printStackTrace();

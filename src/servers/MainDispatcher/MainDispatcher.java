@@ -161,11 +161,6 @@ public class MainDispatcher {
 
     // ===== Aux Methods =====
     private static byte[] executeCommand(Socket clientSocket, byte[] content, Command command){
-
-        access(clientSocket, content);
-        SSLSocket ssSocket = startConnectiontoSSServer();
-        //===== Receive 1 from client =====
-        content = MySSLUtils.receiveData(clientSocket);
         //===== Send 1 from ss =====
         byte[] dataToSend_S2 = addClientIPToBeggining(clientSocket, content);
         SSLSocket ssSocket = startConnectiontoSSServer();
