@@ -6,10 +6,6 @@ public abstract class ClientValidator {
         return cmd.split(" ").length == 3;
     }
 
-    public static boolean accessValidator(String cmd){
-        return cmd.split(" ").length == 2;
-    }
-
     public static boolean makedirValidator(String cmd) {
         return cmd.split(" ").length == 3;
     }

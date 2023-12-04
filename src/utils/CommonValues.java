@@ -34,7 +34,7 @@ public abstract class CommonValues {
 
     // Packages
     public static final int DATA_SIZE = 2048;
-    public static final int FILE_SIZE = 4_000_000;
+    public static final int FILE_SIZE = 16_000;
 
     // Error Codes
     public static final int OK_CODE = 0;

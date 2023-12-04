@@ -95,28 +95,42 @@ public class StorageServiceServer {
          *
          * Send-1 -> { len + { R }Kc,s }
          * Receive-2 -> { len + IPClient || { len + arguments || Nonce }Kc,s }
+         * Receive-2.1 -> { len+fileContent }Kc,s
          * Send-2 -> { len + { len + Response || Nonce }Kc,s }
          * */
 
-        byte[] receivedContent = receiveRequest(Command.LIST, mdSocket, content, nonceSet);
+        // ===== RECEIVE-SEND-1 & RECEIVE-2 =====
+        byte[] receivedContent = receiveRequest(Command.MKDIR, mdSocket, content, nonceSet);
         if (receivedContent == null) {
             return MySSLUtils.buildErrorResponse();
         }
 
+        // Unpack from receiveRequest
         ByteBuffer bb = ByteBuffer.wrap(receivedContent);
         byte[] userIdBytes = MySSLUtils.getNextBytes(bb);
         byte[] clientServiceKeyBytes = MySSLUtils.getNextBytes(bb);
-        byte[] arguments = MySSLUtils.getNextBytes(bb); //len+(len + userPath || len + path || len + content)
+        byte[] arguments = MySSLUtils.getNextBytes(bb);
+
+        // Unpack arguments and nonce
         bb = ByteBuffer.wrap(arguments);
-        String username = new String(userIdBytes);
         String userPath = new String(MySSLUtils.getNextBytes(bb));
         String path = new String(MySSLUtils.getNextBytes(bb));
-        byte[] fileContent = MySSLUtils.getNextBytes(bb);
-        long nonce2 = bb.getLong();
+        long nonce = bb.getLong();
 
-        Key clientServiceKey = CryptoStuff.parseSymKeyFromBytes(clientServiceKeyBytes);
+        // Command Logic
         String directoryPath = DEFAULT_DIR + "/" + userPath + "/" + path;
         Path directory = Paths.get(directoryPath);
+
+        Key clientServiceKey = CryptoStuff.parseSymKeyFromBytes(clientServiceKeyBytes);
+
+        byte[] fileEncryptedWithlen = MySSLUtils.receiveFile(mdSocket);
+        bb = ByteBuffer.wrap(fileEncryptedWithlen);
+
+        byte[] fileEncrypted = MySSLUtils.getNextBytes(bb);
+
+        byte[] fileContent = CryptoStuff.symDecrypt(clientServiceKey, fileEncrypted);
+        System.out.println(fileEncrypted.length);
+
         if (!Files.exists(directory.getParent()) || !Files.isDirectory(directory.getParent())) {
             System.out.println("Directory does not exist.");
             return MySSLUtils.buildErrorResponse();
@@ -147,13 +161,15 @@ public class StorageServiceServer {
         bb = ByteBuffer.wrap(responseDecrypted);
 
         MySSLUtils.putLengthAndBytes(bb, response);
-        bb.putLong(nonce2);
+        bb.putLong(nonce);
+
+
         byte[] responseEncrypted = CryptoStuff.symEncrypt(clientServiceKey, responseDecrypted);
+
         byte[] dataToSend = new byte[Integer.BYTES + responseEncrypted.length];
         bb = ByteBuffer.wrap(dataToSend);
+
         MySSLUtils.putLengthAndBytes(bb, responseEncrypted);
-
-
         return MySSLUtils.buildResponse(CommonValues.OK_CODE, dataToSend);
     }
 

@@ -2,6 +2,7 @@ package servers.MainDispatcher;
 
 import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.util.Base64;
 
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
@@ -11,59 +12,6 @@ import utils.Command;
 import utils.CommonValues;
 
 public class MainDispatcher {
-
-    public static byte[] mult(byte[] content) {
-        ByteBuffer input = ByteBuffer.wrap(content);
-        // Input -> content: {int}
-        // Output -> content: {result_code(int) | length(int) | result(int)}
-
-        // Unpack
-        int i = input.getInt(0);
-
-        // Start Method
-        int result = i * 2;
-
-        // Packing
-        byte[] resultArray = new byte[CommonValues.DATA_SIZE];
-        ByteBuffer output = ByteBuffer.wrap(resultArray);
-
-        // Result code
-        output.putInt(0, CommonValues.OK_CODE);
-
-        // Length of result
-        output.putInt(Integer.BYTES, Integer.BYTES);
-
-        // Result
-        output.putInt(2 * Integer.BYTES, result);
-
-        return resultArray;
-    }
-
-    public static byte[] sum(byte[] content) {
-        ByteBuffer input = ByteBuffer.wrap(content);
-        // Input -> content: {int}
-        // Output -> content: {int}
-
-        // Unpack
-        int i = input.getInt(0);
-
-        // Start Method
-        int result = i + 1;
-
-        byte[] resultArray = new byte[CommonValues.DATA_SIZE];
-        ByteBuffer output = ByteBuffer.wrap(resultArray);
-
-        // Result code 
-        output.putInt(0, CommonValues.OK_CODE);
-
-        // Length of result
-        output.putInt(Integer.BYTES, Integer.BYTES);
-
-        // Result
-        output.putInt(2 * Integer.BYTES, result);
-
-        return resultArray;
-    }
 
     public static byte[] clientStats(Socket clientSocket, byte[] content) {
         try {
@@ -154,13 +102,15 @@ public class MainDispatcher {
     }
 
     public static byte[] makedir(Socket clientSocket, byte[] content){
-        return executeCommand(clientSocket,content,Command.MKDIR);
+        return executeReadCommand(clientSocket,content,Command.MKDIR);
+    }
+    public static byte[] put(Socket clientSocket, byte[] content){
+        System.out.println("Executing put");
+        return executeWriteCommand(clientSocket,content,Command.PUT);
     }
 
-
-
     // ===== Aux Methods =====
-    private static byte[] executeCommand(Socket clientSocket, byte[] content, Command command){
+    private static byte[] executeReadCommand(Socket clientSocket, byte[] content, Command command){
         //===== Send 1 from ss =====
         byte[] dataToSend_S2 = addClientIPToBeggining(clientSocket, content);
         SSLSocket ssSocket = startConnectiontoSSServer();
@@ -181,6 +131,38 @@ public class MainDispatcher {
 
         //===== Receive 4 from SS ====
 
+        content = MySSLUtils.receiveData(ssSocket);
+
+        // ===== Send 4 to client =====
+        return content;
+    }
+
+    private static byte[] executeWriteCommand(Socket clientSocket, byte[] content, Command command){
+        //===== Send 1 to ss =====
+        byte[] dataToSend_S2 = addClientIPToBeggining(clientSocket, content);
+        SSLSocket ssSocket = startConnectiontoSSServer();
+        MySSLUtils.sendData(ssSocket, MySSLUtils.buildPackage(command, dataToSend_S2));
+
+        //===== Receive 2 from ss =====
+        content = MySSLUtils.receiveData(ssSocket);
+
+        // ===== Send 2 to client =====
+        MySSLUtils.sendData(clientSocket, content);
+
+        //===== Receive 3 from client =====
+        content = MySSLUtils.receiveData(clientSocket);
+
+        // ===== Client file =====
+        byte[] fileBytes = MySSLUtils.receiveFile(clientSocket);
+
+        // ===== Send 3 to SS =====
+        byte[] dataToSend_S3 = addClientIPToBeggining(clientSocket, content);
+        MySSLUtils.sendData(ssSocket, dataToSend_S3);
+
+        // ==== SS Send file ====
+        MySSLUtils.sendFile(ssSocket, fileBytes);
+
+        //===== Receive 4 from SS ====
         content = MySSLUtils.receiveData(ssSocket);
 
         // ===== Send 4 to client =====

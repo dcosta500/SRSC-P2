@@ -10,6 +10,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketOption;
 import java.nio.ByteBuffer;
 import java.security.KeyStore;
 
@@ -185,6 +186,7 @@ public abstract class MySSLUtils {
         byte[] data = new byte[CommonValues.FILE_SIZE];
         ByteBuffer bb = ByteBuffer.wrap(data);
 
+        bb.putInt(-1);
         MySSLUtils.putLengthAndBytes(bb, file);
 
         return data;
@@ -231,7 +233,26 @@ public abstract class MySSLUtils {
     public static void sendData(Socket socket, byte[] data) {
         try {
             OutputStream out = socket.getOutputStream();
+            socket.setSendBufferSize(CommonValues.DATA_SIZE);
             out.write(data);
+            out.flush();
+        } catch (Exception e) {
+            System.out.println("Could not send data.");
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Send file to socket
+     *
+     * @param socket the socket
+     * @param file   the dile to be sent
+     */
+    public static void sendFile(Socket socket, byte[] file) {
+        try {
+            OutputStream out = socket.getOutputStream();
+            socket.setSendBufferSize(CommonValues.FILE_SIZE);
+            out.write(file);
             out.flush();
         } catch (Exception e) {
             System.out.println("Could not send data.");
@@ -248,6 +269,7 @@ public abstract class MySSLUtils {
     public static byte[] receiveData(Socket socket) {
         try {
             InputStream inputStream = socket.getInputStream();
+            socket.setReceiveBufferSize(CommonValues.DATA_SIZE);
             byte[] buffer = new byte[CommonValues.DATA_SIZE];
             int bytesRead = inputStream.read(buffer, 0, buffer.length);
             if (bytesRead == 0) return new byte[0];
@@ -268,6 +290,7 @@ public abstract class MySSLUtils {
     public static byte[] receiveFile(Socket socket) {
         try {
             InputStream inputStream = socket.getInputStream();
+            socket.setReceiveBufferSize(CommonValues.FILE_SIZE);
             byte[] buffer = new byte[CommonValues.FILE_SIZE];
             int bytesRead = inputStream.read(buffer, 0, buffer.length);
             if (bytesRead == 0) return new byte[0];

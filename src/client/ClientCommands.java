@@ -7,13 +7,13 @@ import java.security.KeyPair;
 import java.security.PublicKey;
 import java.time.Instant;
 import java.util.Base64;
-import javax.net.ServerSocketFactory;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
 import client.responseModels.AccessResponseModel;
 import client.responseModels.LoginResponseModel;
 import client.responseModels.MakedirResponseModel;
+import client.responseModels.PutFileResponseModel;
 import utils.Command;
 import utils.CommonValues;
 import utils.CryptoStuff;
@@ -225,8 +225,8 @@ public abstract class ClientCommands {
         System.out.println("Ip: " + new String(ipAddBytes, StandardCharsets.UTF_8));
     }
 
-    public static MakedirResponseModel mkdir(SSLSocket socket, byte[] auth_ktoken1024, AccessResponseModel arm, Key client_auth_key, String uid, String cmdArgs, SSLSocketFactory factory) {
-        String response = executeReadCommand(socket, auth_ktoken1024, arm, client_auth_key, uid, cmdArgs, factory);
+    public static MakedirResponseModel mkdir(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs, SSLSocketFactory factory) {
+        String response = executeReadCommand(Command.MKDIR, socket, auth_ktoken1024, client_auth_key, uid, cmdArgs, factory);
         return new MakedirResponseModel(response);
     }
 
@@ -287,8 +287,7 @@ public abstract class ClientCommands {
         return AccessResponseModel.parse(key_c_service, serviceId_check, timestamp_final, kvToken);
     }
 
-    private static String executeReadCommand(SSLSocket socket, byte[] auth_ktoken1024, AccessResponseModel arm,
-                                             Key client_auth_key, String uid, String cmdArgs, SSLSocketFactory factory) {
+    private static String executeReadCommand(Command command, SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs, SSLSocketFactory factory) {
         /* Data Flow:
          * Send-1 -> { len + IDservice || len + Ktoken1024 || len + AUTHclient1 }
          * Receive-1 -> { len + Kc,s || len + IDservice || len + TSf || len + Kvtoken }Kc,Ac
@@ -334,7 +333,7 @@ public abstract class ClientCommands {
 
         // ===== RECEIVE 3 =====
         // Receive-3 -> { len +  { len + response || Nonce }Kc,s }
-        return receiveResponse(socket, arm, nonce);
+        return receiveResponse(socket, nonce);
     }
 
     private static void sendArguments(SSLSocket socket, AccessResponseModel arm, String cmdArgs, long nonce) {
@@ -397,7 +396,7 @@ public abstract class ClientCommands {
     private static boolean authenticateService(SSLSocket socket, AccessResponseModel arm, Key client_auth_key, String uid) {
         // ===== SEND 2 =====
         // { len + Kvtoken || len + AUTHclient2 || R (long) }
-        byte[] clientAuth2 = createClientAuthenticator(uid, client_auth_key);
+        byte[] clientAuth2 = createClientAuthenticator(uid, client_service_key);
         long rChallenge = CryptoStuff.getRandom();
         byte[] dataToSend2 = new byte[2 * Integer.BYTES + arm.kvtoken.length + clientAuth2.length + Long.BYTES];
 
@@ -437,8 +436,7 @@ public abstract class ClientCommands {
             byte[] uid_bytes = uid.getBytes();
             byte[] instant_bytes = Instant.now().toString().getBytes();
 
-            byte[] auth_Client = new byte[2 * Integer.BYTES + uid_bytes.length + instant_bytes.length
-                    + Long.BYTES];
+            byte[] auth_Client = new byte[2 * Integer.BYTES + uid_bytes.length + instant_bytes.length + Long.BYTES];
 
             ByteBuffer bb = ByteBuffer.wrap(auth_Client);
 
@@ -453,8 +451,7 @@ public abstract class ClientCommands {
     }
 
     private static SSLSocket startConnectionToMDServer(SSLSocketFactory factory) {
-        SSLSocket socket = MySSLUtils.startNewConnectionToServer(factory, CommonValues.MD_HOSTNAME,
-                CommonValues.MD_PORT_NUMBER);
+        SSLSocket socket = MySSLUtils.startNewConnectionToServer(factory, CommonValues.MD_HOSTNAME, CommonValues.MD_PORT_NUMBER);
 
         return socket;
     }

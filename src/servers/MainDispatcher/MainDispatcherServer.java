@@ -29,7 +29,6 @@ public class MainDispatcherServer {
             Socket socket;
             try {
                 System.out.println("Waiting for connection...");
-                assert ss != null;
                 socket = ss.accept();
                 System.out.println("Accepted a connection.");
             } catch (IOException e) {
@@ -44,10 +43,6 @@ public class MainDispatcherServer {
 
     private static byte[] executeCommand(Socket socket, DataPackage dp) {
         switch (dp.getCommand()) {
-            case SUM:
-                return MainDispatcher.sum(dp.getContent());
-            case MULT:
-                return MainDispatcher.mult(dp.getContent());
             case LOGIN:
                 return MainDispatcher.login(socket, dp.getContent());
             case STATS:
@@ -56,6 +51,8 @@ public class MainDispatcherServer {
                 return MainDispatcher.access(socket, dp.getContent());
             case MKDIR:
                 return MainDispatcher.makedir(socket,dp.getContent());
+            case PUT:
+                return MainDispatcher.put(socket,dp.getContent());
             default:
                 return new byte[0];
         }

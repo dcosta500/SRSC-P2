@@ -1,15 +1,14 @@
 package client.responseModels;
 
 public class MakedirResponseModel {
-    String response;
+    private String response;
 
     public MakedirResponseModel(String response) {
         this.response = response;
     }
 
-    public String getResponse(){
+    public String getResponse() {
         return response;
     }
-
 
 }

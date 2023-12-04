@@ -30,12 +30,6 @@ public class Client {
     private static String USERNAME_LOGGED = "";
     private static final String PASSWORD = "cl123456";
 
-    private static byte[] auth_ktoken1024;
-    private static Key client_ac_key;
-
-    private static byte[] control_vtoken1024;
-    private static Key client_ss_key;
-
     private static void readCommands() {
         /* *
          * Instructions to add a new command
@@ -59,12 +53,6 @@ public class Client {
             System.out.print(USERNAME_LOGGED + "Command -> ");
             String cmd = in.nextLine();
             switch (Command.valueOf(cmd.split(" ")[0].toUpperCase())) {
-                case SUM:
-                    ClientCommands.sum(socket);
-                    break;
-                case MULT:
-                    ClientCommands.mult(socket);
-                    break;
                 case STATS:
                     ClientCommands.stats(socket);
                     break;
@@ -73,6 +61,9 @@ public class Client {
                     break;
                 case MKDIR:
                     makedir(cmd,factory);
+                    break;
+                case PUT:
+                    put(cmd,factory);
                     break;
                 default:
                     break masterLoop;
@@ -105,36 +96,10 @@ public class Client {
             return;
         }
 
+        ClientTokens.lrm = lrm;
         USERNAME_LOGGED = lrm.username + ":";
-        auth_ktoken1024 = lrm.ktoken1024;
-        System.out.println("Login successfully done at: " + lrm.timestampFinal.toString());
-        client_ac_key = lrm.clientAc_SymKey;
+        System.out.println("Login successfully done at: " + ClientTokens.lrm.timestampFinal.toString());
     }
-
-    /*private static void access(String cmd){
-        if (!ClientValidator.accessValidator(cmd)){
-            System.out.println("Command is not correctly formatted");
-            return;
-        }
-
-        if (auth_ktoken1024 == null || auth_ktoken1024.length == 0) {
-            System.out.println("You haven't logged in yet.");
-            return;
-        }
-
-        AccessResponseModel arm = ClientCommands.access(socket, auth_ktoken1024, null, client_ac_key, uid, cmd);
-        processAccessControlResponse(arm);
-    }
-
-    private static void processAccessControlResponse(AccessResponseModel arm) {
-        if (arm == null) {
-            return;
-        }
-
-        control_vtoken1024 = arm.kvtoken;
-        System.out.println("Access Control granted successfully done at: " + arm.timestampFinal.toString());
-        client_ss_key = arm.clientService_key;
-    }*/
 
     private static void makedir(String cmd, SSLSocketFactory factory) {
         if (!ClientValidator.makedirValidator(cmd)){
@@ -142,7 +107,7 @@ public class Client {
             return;
         }
 
-        if (auth_ktoken1024 == null || auth_ktoken1024.length == 0) {
+        if (ClientTokens.lrm == null) {
             System.out.println("You haven't logged in yet.");
             return;
         }
@@ -155,7 +120,30 @@ public class Client {
         if (mdm == null) {
             return;
         }
+
         System.out.println(mdm.getResponse());
+    }
+
+    private static void put(String cmd, SSLSocketFactory factory){
+        if (!ClientValidator.putValidator(cmd)){
+            System.out.println("Command is not correctly formatted");
+            return;
+        }
+
+        if (ClientTokens.lrm.ktoken1024 == null || ClientTokens.lrm.ktoken1024.length == 0) {
+            System.out.println("You haven't logged in yet.");
+            return;
+        }
+        PutFileResponseModel prm = ClientCommands.put(socket,ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey,uid, cmd, factory);
+        processPutResponse(prm);
+    }
+
+    private static void processPutResponse(PutFileResponseModel prm) {
+        if (prm == null) {
+            return;
+        }
+
+        System.out.println(prm.getMessage());
     }
 
     private static void processClientConfFile(){

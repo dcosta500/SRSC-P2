@@ -22,7 +22,7 @@ compileJava(){
   echo "Compiling project..."
 
   javac -d out ./src/utils/* ./src/client/responseModels/* ./src/client/Client.java ./src/client/ClientCommands.java\
-  ./src/client/ClientValidator.java
+  ./src/client/ClientValidator.java ./src/client/ClientTokens.java
   javac -d out ./src/utils/* ./src/servers/MainDispatcher/*
   javac -d out ./src/utils/* ./src/servers/AuthenticationServer/*
   javac -d out ./src/utils/* ./src/servers/AccessControlServer/*
