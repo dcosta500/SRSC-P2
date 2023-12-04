@@ -55,7 +55,6 @@ public class Client {
             String cmd = in.nextLine();
             switch (Command.valueOf(cmd.split(" ")[0].toUpperCase())) {
                 case TEST:
-                    System.out.println("TEST");
                     ClientCommands.test(socket);
                     break;
                 case STATS:
@@ -68,7 +67,6 @@ public class Client {
                     makedir(cmd);
                     break;
                 case PUT:
-                    System.out.println("PUT...");
                     put(cmd);
                     break;
                 default:
@@ -140,6 +138,7 @@ public class Client {
             System.out.println("You haven't logged in yet.");
             return;
         }
+
         PutFileResponseModel prm = ClientCommands.put(socket, ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey,
                 uid, cmd);
         processPutResponse(prm);

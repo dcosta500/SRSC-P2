@@ -14,13 +14,12 @@ import utils.CommonValues;
 
 public class MainDispatcher {
     public static byte[] test(Socket clientSocket, byte[] content) {
-        MySSLUtils.printToLogFile("MD", "TEST AT " + Instant.now().toString());
-        System.out.println("Executing test");
         MySSLUtils.sendData(clientSocket, new byte[1]);
-        byte[] file = MySSLUtils.receiveData(clientSocket);
+        byte[] file = MySSLUtils.receiveFile(clientSocket);
 
         System.out.printf("Content length: %d\n", file.length);
         System.out.printf("Content: %s\n", Base64.getEncoder().encodeToString(file));
+
         return new byte[0];
     }
 
@@ -96,8 +95,6 @@ public class MainDispatcher {
          * Send-2: redirect
          */
 
-        System.out.println("===== ENTERED =====");
-
         // ===== Receive-1 from client =====
         // ...
 
@@ -142,7 +139,6 @@ public class MainDispatcher {
         MySSLUtils.sendData(ssSocket, dataToSend_S3);
 
         //===== Receive 4 from SS ====
-
         content = MySSLUtils.receiveData(ssSocket);
 
         // ===== Send 4 to client =====
@@ -172,11 +168,12 @@ public class MainDispatcher {
 
         // ====== Signal to send ======
         byte[] signalToSend = MySSLUtils.receiveData(ssSocket);
-
         MySSLUtils.sendData(clientSocket, signalToSend);
 
         // ===== Client file =====
         byte[] fileBytes = MySSLUtils.receiveFile(clientSocket);
+
+        System.out.println(Base64.getEncoder().encodeToString(fileBytes));
 
         // ==== SS Send file ====
         MySSLUtils.sendFile(ssSocket, fileBytes);

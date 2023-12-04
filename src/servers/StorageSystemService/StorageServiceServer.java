@@ -123,13 +123,15 @@ public class StorageServiceServer {
 
         Key clientServiceKey = CryptoStuff.parseSymKeyFromBytes(clientServiceKeyBytes);
 
-        // Signal to send content
-        MySSLUtils.sendData(mdSocket, new byte[1]);
-
         byte[] fileEncryptedWithlen = MySSLUtils.receiveFile(mdSocket);
         bb = ByteBuffer.wrap(fileEncryptedWithlen);
 
         byte[] fileEncrypted = MySSLUtils.getNextBytes(bb);
+
+        if(fileEncrypted.length == 0){
+            System.out.println("Could not receive file properly.");
+            return MySSLUtils.buildErrorResponse();
+        }
 
         byte[] fileContent = CryptoStuff.symDecrypt(clientServiceKey, fileEncrypted);
         System.out.println(Base64.getEncoder().encodeToString(fileEncryptedWithlen));
@@ -138,6 +140,7 @@ public class StorageServiceServer {
             System.out.println("Directory does not exist.");
             return MySSLUtils.buildErrorResponse();
         }
+
         byte[] contentEncrypted;
         byte[] response;
         try {

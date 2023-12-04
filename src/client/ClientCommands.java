@@ -1,5 +1,7 @@
 package client;
 
+import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -30,12 +32,17 @@ public abstract class ClientCommands {
     public static void test(SSLSocket socket) {
         MySSLUtils.sendData(socket, MySSLUtils.buildPackage(Command.TEST, new byte[0]));
         MySSLUtils.receiveData(socket);
-        byte[] dataToSend = MySSLUtils.buildFilePackage(new byte[8_000]);
 
-        System.out.println("dataToSend length: " + dataToSend.length);
-        MySSLUtils.sendData(socket, new byte[1_000]);
+        String path = System.getProperty("user.dir") + "/clientFiles/putRoot/alice/images/a";
 
-        System.out.println("4");
+        try {
+            byte[] fileBytes = Files.readAllBytes(Path.of(path));
+            System.out.println("File size: " + fileBytes.length);
+            System.out.println("File: " + Base64.getEncoder().encodeToString(fileBytes));
+            MySSLUtils.sendFile(socket, fileBytes);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public static void stats(SSLSocket socket) {
@@ -190,7 +197,6 @@ public abstract class ClientCommands {
 
     // ===== AUX METHODS =====
     private static AccessResponseModel access(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid) {
-        System.out.println("Entered access");
         /* *
          * Data flow:
          * Send-1-> { len+IdService || len+token1024 || len+AuthClient}
@@ -215,13 +221,7 @@ public abstract class ClientCommands {
 
         MySSLUtils.putLengthAndBytes(bb, serviceIDbytes, auth_ktoken1024, clientAuthenticator);
 
-        //System.out.printf("ServiceID: %s\n",Base64.getEncoder().encodeToString(serviceIDbytes));
-        //System.out.printf("Token1024: %s\n", Base64.getEncoder().encodeToString(auth_ktoken1024));
-        //System.out.printf("authClient: %s\n", Base64.getEncoder().encodeToString(clientAuthenticator));
-        //System.out.printf("ServiceID: %s\n", Base64.getEncoder().encodeToString(dataToSend1));
-
         byte[] payloadToSend = MySSLUtils.buildPackage(Command.ACCESS, dataToSend1);
-        System.out.println("Payload: " + Base64.getEncoder().encodeToString(payloadToSend));
         MySSLUtils.sendData(socket, payloadToSend);
 
 
@@ -270,8 +270,6 @@ public abstract class ClientCommands {
          */
 
         // ===== ACCESS =====
-        System.out.println("1 First access");
-
         if (ClientTokens.arm == null) {
             SSLSocket acSocket = startConnectionToMDServer();
             ClientTokens.arm = access(acSocket, auth_ktoken1024, client_auth_key, uid);
@@ -345,24 +343,28 @@ public abstract class ClientCommands {
         sendArguments(socket, ClientTokens.arm, cmdArgs, nonce);
         String[] args = cmdArgs.split(" ");
 
-        // wait for signal
-        byte[] signalToSend = MySSLUtils.receiveData(socket);
-
-        System.out.println("Signal to send len: " + signalToSend.length);
-
-        //==== Send 3.1 ====
+        //==== Prepare file to send ====
         Path pathToFile = Paths.get(DEFAULT_PUT_DIR).resolve(uid).resolve(args[2]);
+        byte[] sendFile = null;
         try {
             byte[] fileBytes = Files.readAllBytes(pathToFile);
             byte[] encryptedFile = CryptoStuff.symEncrypt(ClientTokens.arm.clientService_key, fileBytes);
+
             System.out.println(encryptedFile.length);
-            byte[] sendFile = new byte[Integer.BYTES + encryptedFile.length];
+
+            sendFile = new byte[Integer.BYTES + encryptedFile.length];
             ByteBuffer bb = ByteBuffer.wrap(sendFile);
+
             MySSLUtils.putLengthAndBytes(bb, encryptedFile);
-            MySSLUtils.sendFile(socket, sendFile);
         } catch (Exception e) {
             System.out.println("Morreram todos");
         }
+
+        // wait for signal
+        byte[] signalToSend = MySSLUtils.receiveData(socket);
+        System.out.println("Signal to send len: " + signalToSend.length);
+
+        MySSLUtils.sendFile(socket, sendFile);
 
         // ===== RECEIVE 3 =====
         // Receive-3 -> { len +  { len + response || Nonce }Kc,s }
@@ -484,7 +486,6 @@ public abstract class ClientCommands {
 
     private static SSLSocket startConnectionToMDServer() {
         String keystorePath = String.format("certs/clients/%sCrypto/keystore_%s_cl.jks", ClientTokens.lrm.username, ClientTokens.lrm.username);
-        System.out.println("Keystore path: " + keystorePath);
         SSLSocketFactory factory = MySSLUtils.createClientSocketFactory(keystorePath, "cl123456");
         SSLSocket socket = MySSLUtils.startNewConnectionToServer(factory, CommonValues.MD_HOSTNAME, CommonValues.MD_PORT_NUMBER);
 

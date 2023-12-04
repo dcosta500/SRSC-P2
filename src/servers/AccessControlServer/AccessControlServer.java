@@ -43,8 +43,6 @@ public class AccessControlServer {
         // Ktoken1024 = { len + Ktoken1024_content || len + SIGauth(Ktoken1024_content) }Kauth,ac
         // Ktoken1024_content = { len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }
 
-        System.out.println("===== ENTERED =====");
-
         String ipClient;
         String idService;
 
