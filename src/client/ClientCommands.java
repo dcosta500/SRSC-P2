@@ -222,7 +222,7 @@ public abstract class ClientCommands {
         ResponsePackage rp = ResponsePackage.parse(dataToReceive_R1);
 
         if (rp.getCode() == CommonValues.ERROR_CODE) {
-            System.out.println("Could not do access");
+            System.out.println("Could not do access control.");
             return null;
         }
 
@@ -282,7 +282,6 @@ public abstract class ClientCommands {
         }
 
         if (ClientTokens.arm == null) {
-            System.out.println("Could not retrieve from Access Control");
             return null;
         }
 
