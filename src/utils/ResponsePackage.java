@@ -30,11 +30,11 @@ public class ResponsePackage {
     public static ResponsePackage parse(byte[] data) {
         ByteBuffer bb = ByteBuffer.wrap(data);
 
-        int code = bb.getInt(0);
-        int length = bb.getInt(Integer.BYTES);
+        int code = bb.getInt();
+        int length = bb.getInt();
 
         byte[] content = new byte[length];
-        bb.get(2 * Integer.BYTES, content);
+        bb.get(content);
 
         return new ResponsePackage(code, length, content);
     }

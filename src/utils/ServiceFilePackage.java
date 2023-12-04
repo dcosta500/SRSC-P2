@@ -27,7 +27,8 @@ public class ServiceFilePackage {
 
     private boolean unpack(byte[] data) {
         /* *
-         * File -> { len + fileContent || len + SIGs(fileContent) }Kspriv
+         * data -> { len+File || padding }Kspriv
+         * File -> { len + fileContent || len + SIGs(fileContent) }
          * fileContent = { len + metadata || len + content }
          * metadata = { len + path || len + owner || len + TSCreation || len + lastChangedUser || len + TSLastChanged || len + lastReadUser || len + TSLastRead }
          * */
@@ -39,7 +40,7 @@ public class ServiceFilePackage {
         byte[] signature = MySSLUtils.getNextBytes(bb);
 
         // Verify signature
-        PublicKey pubKey = CryptoStuff.getPublicKeyFromCertificate("ss", System.getProperty("user.dir")+"/certs/ssCrypto/ss.cer","ss123456");
+        PublicKey pubKey = CryptoStuff.getPublicKeyFromCertificate("ss", System.getProperty("user.dir") + "/certs/ssCrypto/ss.cer", "ss123456");
         if (!CryptoStuff.verifySignature(pubKey, fileContent, signature)) {
             System.out.println("Signature does not match in the file.");
             System.out.println("File is corrupted.");
@@ -51,7 +52,7 @@ public class ServiceFilePackage {
         byte[] metadata = MySSLUtils.getNextBytes(bb);
         byte[] content = MySSLUtils.getNextBytes(bb);
 
-        bb= ByteBuffer.wrap(metadata);
+        bb = ByteBuffer.wrap(metadata);
         byte[] pathBytes = MySSLUtils.getNextBytes(bb);
         System.out.println("Path bytes: " + new String(pathBytes, StandardCharsets.UTF_8));
         byte[] ownerBytes = MySSLUtils.getNextBytes(bb);
@@ -112,12 +113,15 @@ public class ServiceFilePackage {
         return String.format("Metadata -> [ name:%s, owner:%s, createTime:%s, lastEditUser:%s, lastEditTime:%s, lastReadUser:%s, lastReadTime:%s ]",
                 path, owner, creationTime, lastWriteUser, lastWriteTime, lastReadUser, lastReadTime);
     }
+
     public static byte[] createFileBytes(byte[] content, String owner, String path) {
         /* *
          * File -> { len + fileContent || len + SIGs(fileContent) }Kspriv
          * fileContent = { len + metadata || len + content }
          * metadata = { len + path || len + owner || len + TSCreation || len + lastChangedUser || len + TSLastChanged || len + lastReadUser || len + TSLastRead }
          * */
+
+        // {len + File + padding}Kspriv
 
         Instant now = Instant.now();
         // Metadata
@@ -233,14 +237,25 @@ public class ServiceFilePackage {
     }
 
     private static byte[] signFileContentAndEncrypt(byte[] fileContent) {
-        // File -> { len + fileContent || len + SIGs(fileContent) }Kspriv
+        // File -> { len + fileContent || len + SIGs(fileContent) }
+
+        // {len+file || padding}kc
+
         PrivateKey privKey = CryptoStuff.getPrivateKeyFromKeystore("ss", "ss123456");
         byte[] signature = CryptoStuff.sign(privKey, fileContent);
 
         // Encrypt and Pack
         byte[] fileAndSigBytes = createFileContent(signature, fileContent);
 
+        byte[] fileForSystem = new byte[CommonValues.DATA_SIZE];
+        ByteBuffer bb = ByteBuffer.wrap(fileForSystem);
+
+        MySSLUtils.putLengthAndBytes(bb, fileAndSigBytes);
+        int pad_len = CommonValues.DATA_SIZE - Integer.BYTES - fileAndSigBytes.length;
+        byte[] padding = CryptoStuff.generateRandomByteArray(pad_len);
+        bb.put(padding);
+
         Key key = CryptoStuff.parseSymKeyFromBase64(System.getProperty("PRIVATE_SYM_KEY"));
-        return CryptoStuff.symEncrypt(key, fileAndSigBytes);
+        return CryptoStuff.symEncrypt(key, fileForSystem);
     }
 }

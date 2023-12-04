@@ -1,6 +1,5 @@
 package client;
 
-import javax.net.ServerSocketFactory;
 import javax.net.ssl.*;
 
 import client.responseModels.*;
@@ -8,7 +7,6 @@ import utils.*;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.security.Key;
 import java.util.Properties;
 import java.util.Scanner;
 

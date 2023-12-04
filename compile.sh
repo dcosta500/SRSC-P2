@@ -9,6 +9,10 @@ genNewCerts(){
     cd ..
 }
 
+resetClientFiles(){
+  rm -r ./clientFiles/getRoot
+}
+
 runClient(){
   if [ "$client_name" != "null" ]; then
     echo "\v"
@@ -73,6 +77,7 @@ while getopts ":gc:" opt; do
   esac
 done
 
+resetClientFiles
 compileJava
 resetDocker
 buildAndRunDocker

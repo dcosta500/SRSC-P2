@@ -1,7 +1,5 @@
 package client;
 
-import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -12,7 +10,6 @@ import java.security.Key;
 import java.security.KeyPair;
 import java.security.PublicKey;
 import java.time.Instant;
-import java.util.Base64;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
@@ -357,8 +354,6 @@ public abstract class ClientCommands {
             return null;
         }
 
-        System.out.println("Authenticated Service");
-
         // ===== SEND 3 =====
         //{ len + { len + arguments || Nonce }Kc,s }
         long nonce = CryptoStuff.getRandom();
@@ -374,8 +369,6 @@ public abstract class ClientCommands {
             System.out.println("Morreram todos");
         }
         sendFileAndArguments(socket, ClientTokens.arm, cmdArgs, nonce,sendFile);
-
-
 
         // ===== RECEIVE 3 =====
         // Receive-3 -> { len +  { len + response || Nonce }Kc,s }
@@ -463,7 +456,7 @@ public abstract class ClientCommands {
         long nonce2 = bb.getLong();
 
         if (nonce != nonce2) {
-            System.out.println("Nonce don't match");
+            System.out.println("Nonces don't match");
             return null;
         }
 

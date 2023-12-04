@@ -1,10 +1,8 @@
 package utils;
 
 public enum Command {
-
-    TEST("test"), STATS("stats"),
     LOGIN("login"), ACCESS("access"),
-    LIST("ls"), PUT("put"), GET("get"), COPY("cp"), REMOVE("rm"), MKDIR("mkdir"), FILECMD("file");
+    LIST("ls"), PUT("put"), GET("get"), COPY("cp"), REMOVE("rm"), MKDIR("mkdir"), FILE("file");
 
     public String value;
 

@@ -33,8 +33,7 @@ public abstract class CommonValues {
     public static final int TOKEN_VALIDITY_HOURS = 24;
 
     // Packages
-    public static final int DATA_SIZE = 2_048;
-    public static final int FILE_SIZE = 4_096;
+    public static final int DATA_SIZE = 16_383; // Max buffer size for macOS
 
     // Error Codes
     public static final int OK_CODE = 0;

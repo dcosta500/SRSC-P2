@@ -39,7 +39,7 @@ public class SSServer {
                 return StorageServiceServer.copy(socket,dp.getContent(),nonceSet);
             case MKDIR:
                 return StorageServiceServer.mkdir(socket,dp.getContent(),nonceSet);
-            case FILECMD:
+            case FILE:
                 return StorageServiceServer.file(socket,dp.getContent(),nonceSet);
             default:
                 return new byte[0];

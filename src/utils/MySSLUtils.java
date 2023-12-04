@@ -114,6 +114,8 @@ public abstract class MySSLUtils {
             ((SSLServerSocket) ss).setEnabledCipherSuites(new String[]{"TLS_RSA_WITH_AES_128_GCM_SHA256"});
             ((SSLServerSocket) ss).setNeedClientAuth(doClientAuth);
 
+            ss.setReceiveBufferSize(CommonValues.DATA_SIZE);
+
             return ss;
         } catch (IOException e) {
             System.out.println("Problem with sockets: unable to start ClassServer: " + e.getMessage());
@@ -133,6 +135,10 @@ public abstract class MySSLUtils {
     public static SSLSocket startNewConnectionToServer(SSLSocketFactory factory, String hostname, int portNumber) {
         try {
             SSLSocket socket = (SSLSocket) factory.createSocket(hostname, portNumber);
+
+            socket.setReceiveBufferSize(CommonValues.DATA_SIZE);
+            socket.setSendBufferSize(CommonValues.DATA_SIZE);
+
             socket.startHandshake();
             return socket;
         } catch (Exception e) {
@@ -172,23 +178,6 @@ public abstract class MySSLUtils {
 
         bb.putInt(command.ordinal());
         MySSLUtils.putLengthAndBytes(bb, content);
-
-        return data;
-    }
-
-    /**
-     * Build package from file.
-     *
-     * @param file File to be sent
-     * @return the package
-     */
-    public static byte[] buildFilePackage(byte[] file) {
-        // { Command(int) | Length(int) | Content(byte[])}
-        byte[] data = new byte[CommonValues.FILE_SIZE];
-        ByteBuffer bb = ByteBuffer.wrap(data);
-
-        bb.putInt(-1);
-        MySSLUtils.putLengthAndBytes(bb, file);
 
         return data;
     }
@@ -234,26 +223,14 @@ public abstract class MySSLUtils {
     public static void sendData(Socket socket, byte[] data) {
         try {
             OutputStream out = socket.getOutputStream();
-            socket.setSendBufferSize(CommonValues.FILE_SIZE);
-            out.write(data);
-            out.flush();
-        } catch (Exception e) {
-            System.out.println("Could not send data.");
-            e.printStackTrace();
-        }
-    }
 
-    /**
-     * Send file to socket
-     *
-     * @param socket the socket
-     * @param file   the dile to be sent
-     */
-    public static void sendFile(Socket socket, byte[] file) {
-        try {
-            OutputStream out = socket.getOutputStream();
-            socket.setSendBufferSize(CommonValues.FILE_SIZE);
-            out.write(file);
+            byte[] aux = null;
+            if(data.length != CommonValues.DATA_SIZE ){
+                aux = new byte[CommonValues.DATA_SIZE];
+                System.arraycopy(data, 0, aux, 0, Math.min(data.length, aux.length));
+            }
+
+            out.write(aux == null? data: aux);
             out.flush();
         } catch (Exception e) {
             System.out.println("Could not send data.");
@@ -270,29 +247,7 @@ public abstract class MySSLUtils {
     public static byte[] receiveData(Socket socket) {
         try {
             InputStream inputStream = socket.getInputStream();
-            socket.setReceiveBufferSize(CommonValues.DATA_SIZE);
             byte[] buffer = new byte[CommonValues.DATA_SIZE];
-            int bytesRead = inputStream.read(buffer, 0, buffer.length);
-            if (bytesRead == 0) return new byte[0];
-            return buffer;
-        } catch (Exception e) {
-            System.out.println("Error receiving data.");
-            e.printStackTrace();
-        }
-        return new byte[0];
-    }
-
-    /**
-     * Receive file in socket
-     *
-     * @param socket the socket
-     * @return the file received in the socket
-     */
-    public static byte[] receiveFile(Socket socket) {
-        try {
-            InputStream inputStream = socket.getInputStream();
-            socket.setReceiveBufferSize(CommonValues.FILE_SIZE);
-            byte[] buffer = new byte[CommonValues.FILE_SIZE];
             int bytesRead = inputStream.read(buffer, 0, buffer.length);
             if (bytesRead == 0) return new byte[0];
             return buffer;
