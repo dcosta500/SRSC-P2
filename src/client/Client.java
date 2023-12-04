@@ -49,7 +49,13 @@ public class Client {
 
             System.out.print(USERNAME_LOGGED + "Command -> ");
             String cmd = in.nextLine();
-            switch (Command.valueOf(cmd.split(" ")[0].toUpperCase())) {
+            Command command = null;
+            try{
+                command = Command.valueOf(cmd.split(" ")[0].toUpperCase());
+            } catch (Exception e){
+                command = Command.EXIT;
+            }
+            switch (command) {
                 case LOGIN:
                     login(cmd);
                     break;
@@ -74,6 +80,8 @@ public class Client {
                 case REMOVE:
                     remove(cmd);
                     break;
+                case EXIT:
+                    System.out.println("Exiting...");
                 default:
                     break masterLoop;
             }
@@ -121,16 +129,8 @@ public class Client {
             return;
         }
 
-        MakedirResponseModel mdm = ClientCommands.mkdir(socket, ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey, uid, cmd);
-        processMakedirResponse(mdm);
-    }
-
-    private static void processMakedirResponse(MakedirResponseModel mdm) {
-        if (mdm == null) {
-            return;
-        }
-
-        System.out.println(mdm.getResponse());
+        CommandResponseModel crm = ClientCommands.mkdir(socket, ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey, uid, cmd);
+        processResponse(crm, "Could not create directory.");
     }
 
     private static void copy(String cmd){
@@ -144,9 +144,9 @@ public class Client {
             return;
         }
 
-        PutFileResponseModel prm = ClientCommands.copy(socket, ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey,
+        CommandResponseModel crm = ClientCommands.copy(socket, ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey,
                 uid, cmd);
-        processPutResponse(prm);
+        processResponse(crm, "Could not copy file.");
     }
 
     private static void remove(String cmd){
@@ -160,9 +160,9 @@ public class Client {
             return;
         }
 
-        PutFileResponseModel prm = ClientCommands.remove(socket, ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey,
+        CommandResponseModel crm = ClientCommands.remove(socket, ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey,
                 uid, cmd);
-        processPutResponse(prm);
+        processResponse(crm, "Could not remove file.");
     }
 
     private static void file(String cmd){
@@ -176,17 +176,9 @@ public class Client {
             return;
         }
 
-        FileResponseModel frm = ClientCommands.file(socket, ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey,
+        CommandResponseModel crm = ClientCommands.file(socket, ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey,
                 uid, cmd);
-        processFileResponse(frm);
-    }
-
-    private static void processFileResponse(FileResponseModel frm) {
-        if (frm == null) {
-            return;
-        }
-
-        System.out.println(frm.getResponse());
+        processResponse(crm, "Could not retrieve file metadata.");
     }
 
     private static void put(String cmd) {
@@ -200,19 +192,10 @@ public class Client {
             return;
         }
 
-        PutFileResponseModel prm = ClientCommands.put(socket, ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey,
+        CommandResponseModel crm = ClientCommands.put(socket, ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey,
                 uid, cmd);
-        processPutResponse(prm);
+        processResponse(crm, "Could not create file.");
     }
-
-    private static void processPutResponse(PutFileResponseModel prm) {
-        if (prm == null) {
-            return;
-        }
-
-        System.out.println(prm.getMessage());
-    }
-
 
     private static void get(String cmd) {
         if (!ClientValidator.putValidator(cmd)) {
@@ -225,16 +208,9 @@ public class Client {
             return;
         }
 
-        GetFileResponseModel gfm = ClientCommands.get(socket, ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey,
+        CommandResponseModel crm = ClientCommands.get(socket, ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey,
                 uid, cmd);
-        processGetResponse(gfm);
-    }
-
-    private static void processGetResponse(GetFileResponseModel gfm) {
-        if (gfm == null) {
-            return;
-        }
-        System.out.println("Download file");
+        processResponse(crm, "Could not download file.");
     }
 
     private static void list(String cmd) {
@@ -252,17 +228,18 @@ public class Client {
             cmd += " /";
         }
 
-        ListResponseModel lrm = ClientCommands.list(socket, ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey,
+        CommandResponseModel crm = ClientCommands.list(socket, ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey,
                 uid, cmd);
-        processListResponse(lrm);
+        processResponse(crm, "Could not list directory.");
     }
 
-
-    private static void processListResponse(ListResponseModel lrm) {
-        if (lrm == null) {
+    private static void processResponse(CommandResponseModel crm, String errorMessage){
+        if(crm == null){
+            System.out.println(errorMessage);
             return;
         }
-        System.out.print(lrm.getFiles());
+
+        System.out.println(crm.getResponse());
     }
 
     private static void processClientConfFile() {

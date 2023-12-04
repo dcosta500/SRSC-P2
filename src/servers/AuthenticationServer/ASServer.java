@@ -11,10 +11,10 @@ import java.util.Properties;
 
 
 public class ASServer {
-    private static final String[] usernames = { "alice", "bob", "carol", "david", "eric" };
-
     private static final String SERVER_TRUSTSTORE_PATH = "certs/asCrypto/as_truststore";
     private static final String SERVER_KEYSTORE_PATH = "certs/asCrypto/keystore_as.jks";
+
+    private static final String[] usernames = { "alice", "bob", "carol", "david", "eric" };
     private static final String PASSWORD = "as123456";
     private static final boolean DO_CLIENT_AUTH = true;
 
@@ -25,6 +25,7 @@ public class ASServer {
             case LOGIN:
                 return AuthenticationServer.login(socket, users, dp.getContent());
             default:
+                System.out.println("Received unknown command.");
                 return new byte[0];
         }
     }

@@ -24,10 +24,6 @@ public abstract class ClientCommands {
     private static final String DEFAULT_PUT_DIR = System.getProperty("user.dir") + "/clientFiles/putRoot/";
     private static final String DEFAULT_GET_DIR = System.getProperty("user.dir") + "/clientFiles/getRoot/";
 
-
-
-
-
     public static LoginResponseModel login(SSLSocket socket, String cmd) {
         /* *
          * Data flow:
@@ -151,40 +147,45 @@ public abstract class ClientCommands {
         return LoginResponseModel.parse(uid, ktoken1024, tsf, key_bytes);
     }
 
-    public static MakedirResponseModel mkdir(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs) {
-        byte[] response = executeReadCommand(Command.MKDIR, socket, auth_ktoken1024, client_auth_key, uid, cmdArgs);
-        return new MakedirResponseModel(new String(response,StandardCharsets.UTF_8));
+    public static CommandResponseModel mkdir(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs) {
+        byte[] response = executeCommand(Command.MKDIR, socket, auth_ktoken1024, client_auth_key, uid, cmdArgs, false);
+        return response == null ? null: new CommandResponseModel(new String(response, StandardCharsets.UTF_8));
     }
 
-    public static PutFileResponseModel put(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs) {
-        byte[] response = executeWriteCommand(Command.PUT, socket, auth_ktoken1024, client_auth_key, uid, cmdArgs);
-        return new PutFileResponseModel(new String(response, StandardCharsets.UTF_8));
+    public static CommandResponseModel put(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs) {
+        byte[] response = executeCommand(Command.PUT, socket, auth_ktoken1024, client_auth_key, uid, cmdArgs, true);
+        return response == null ? null: new CommandResponseModel(new String(response, StandardCharsets.UTF_8));
     }
 
-    public static GetFileResponseModel get(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs){
-        byte[] response = executeReadCommand(Command.GET, socket, auth_ktoken1024, client_auth_key, uid, cmdArgs);
+    public static CommandResponseModel get(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs) {
+        byte[] response = executeCommand(Command.GET, socket, auth_ktoken1024, client_auth_key, uid, cmdArgs, false);
 
-        writeFromGet(response,cmdArgs);;
-        return new GetFileResponseModel(response);
-    }
+        if(response == null || !writeFromGet(response, cmdArgs))
+            return null;
 
-    public static ListResponseModel list(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs) {
-        byte[] response = executeReadCommand(Command.LIST, socket, auth_ktoken1024, client_auth_key, uid, cmdArgs);
-        return new ListResponseModel(new String(response,StandardCharsets.UTF_8));
+        return new CommandResponseModel("Successfully download file.");
     }
 
-    public static PutFileResponseModel remove(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs){
-        byte[] response = executeReadCommand(Command.REMOVE,socket, auth_ktoken1024, client_auth_key, uid, cmdArgs);
-        return new PutFileResponseModel(new String(response,StandardCharsets.UTF_8));
+    public static CommandResponseModel list(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs) {
+        byte[] response = executeCommand(Command.LIST, socket, auth_ktoken1024, client_auth_key, uid, cmdArgs, false);
+        return response == null ? null: new CommandResponseModel(new String(response, StandardCharsets.UTF_8));
     }
-    public static FileResponseModel file(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs){
-        byte[] response = executeReadCommand(Command.FILE,socket, auth_ktoken1024, client_auth_key, uid, cmdArgs);
-        return new FileResponseModel(new String(response,StandardCharsets.UTF_8));
+
+    public static CommandResponseModel remove(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs) {
+        byte[] response = executeCommand(Command.REMOVE, socket, auth_ktoken1024, client_auth_key, uid, cmdArgs, false);
+        return response == null ? null: new CommandResponseModel(new String(response, StandardCharsets.UTF_8));
     }
-    public static PutFileResponseModel copy(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs){
-        byte[] response = executeReadCommand(Command.COPY,socket, auth_ktoken1024, client_auth_key, uid, cmdArgs);
-        return new PutFileResponseModel(new String(response,StandardCharsets.UTF_8));
+
+    public static CommandResponseModel file(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs) {
+        byte[] response = executeCommand(Command.FILE, socket, auth_ktoken1024, client_auth_key, uid, cmdArgs, false);
+        return response == null ? null: new CommandResponseModel(new String(response, StandardCharsets.UTF_8));
     }
+
+    public static CommandResponseModel copy(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs) {
+        byte[] response = executeCommand(Command.COPY, socket, auth_ktoken1024, client_auth_key, uid, cmdArgs, false);
+        return response == null ? null: new CommandResponseModel(new String(response, StandardCharsets.UTF_8));
+    }
+
     // ===== AUX METHODS =====
     private static AccessResponseModel access(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid) {
         /* *
@@ -239,67 +240,21 @@ public abstract class ClientCommands {
         return AccessResponseModel.parse(key_c_service, serviceId_check, timestamp_final, kvToken);
     }
 
-    private static byte[] executeReadCommand(Command command, SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs) {
-        /* Data Flow:
-         * Send-1 -> { len + IDservice || len + Ktoken1024 || len + AUTHclient1 }
-         * Receive-1 -> { len + Kc,s || len + IDservice || len + TSf || len + Kvtoken }Kc,Ac
-         *
-         * Send-2 -> { len + Kvtoken || len + AUTHclient2 || R (long) }
-         * Receive-2 -> { { R }Kc,s }
-         * Send-3 -> { len + { len + arguments || Nonce }Kc,s }
-         * Receive-3 -> { len + { len + response || Nonce }Kc,s }
-         *
-         * AuthClient1 = { len + { len + IDClient || len + TS || Nonce }Kc,ac }
-         * AuthClient2 = { len + { len + IDClient || len + TS || Nonce }Kc,s }
-         *
-         * Kvtoken = { len + { len + kvtoken_content || len + SIGac( kvtoken_content ) } Kac,s }
-         * kvtoken_content = { len + uid || len + IpClient || len + IdService || len + TSi || len + TSf || len + Kc,s  || len + perms }
-         *
-         * Ktoken1024 = { len + Ktoken1024_content || len + { Ktoken1024_content }SIGauth }Kauth,ac
-         * Ktoken1024_content = { len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }
-         */
-
-        // ===== ACCESS =====
-        if (ClientTokens.arm == null) {
-            SSLSocket acSocket = startConnectionToMDServer();
-            ClientTokens.arm = access(acSocket, auth_ktoken1024, client_auth_key, uid);
-            MySSLUtils.closeConnectionToServer(acSocket);
-        }
-
-        if (ClientTokens.arm == null) {
-            System.out.println("Could not retrieve from Access Control");
-            return null;
-        }
-
-        // ===== AUTHENTICATE SERVICE =====
-        if (!authenticateService(command, socket, ClientTokens.arm.clientService_key, uid)) {
-            System.out.println("Could not authenticate service server.");
-            return null;
-        }
-
-        // ===== SEND 3 =====
-        //{ len + { len + arguments || Nonce }Kc,s }
-        long nonce = CryptoStuff.getRandom();
-        sendArguments(socket, ClientTokens.arm, cmdArgs, nonce);
-
-        // ===== RECEIVE 3 =====
-        // Receive-3 -> { len +  { len + response || Nonce }Kc,s }
-        return receiveResponse(socket, nonce);
-    }
-
-    private static void writeFromGet(byte[] content,String cmdArgs){
-
+    private static boolean writeFromGet(byte[] content, String cmdArgs) {
         String[] args = cmdArgs.split(" ");
         Path pathToFile = Paths.get(DEFAULT_GET_DIR).resolve(args[1]).resolve(args[2]);
         try {
             Files.createDirectories(pathToFile.getParent());
             Files.write(pathToFile, content, StandardOpenOption.CREATE);
         } catch (Exception e) {
-            System.out.println("Morreram todos");
+            System.out.println("Error writing file.");
+            return false;
         }
+        return true;
     }
 
-    private static byte[] executeWriteCommand(Command command, SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs) {
+    private static byte[] executeCommand(Command command, SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key,
+                                         String uid, String cmdArgs, boolean willSendFiles) {
         /* Data Flow:
          * Send-1 -> { len + IDservice || len + Ktoken1024 || len + AUTHclient1 }
          * Receive-1 -> { len + Kc,s || len + IDservice || len + TSf || len + Kvtoken }Kc,Ac
@@ -340,25 +295,30 @@ public abstract class ClientCommands {
         // ===== SEND 3 =====
         //{ len + { len + arguments || Nonce }Kc,s }
         long nonce = CryptoStuff.getRandom();
-        String[] args = cmdArgs.split(" ");
+        if(willSendFiles){
+            String[] args = cmdArgs.split(" ");
 
-        //==== Prepare file to send ====
-        Path pathToFile = Paths.get(DEFAULT_PUT_DIR).resolve(uid).resolve(args[2]);
-        byte[] sendFile = null;
-        try {
-            sendFile = Files.readAllBytes(pathToFile);
-
-        } catch (Exception e) {
-            System.out.println("Morreram todos");
+            //==== Prepare file to send ====
+            Path pathToFile = Paths.get(DEFAULT_PUT_DIR).resolve(uid).resolve(args[2]);
+            byte[] sendFile = null;
+            try {
+                sendFile = Files.readAllBytes(pathToFile);
+            } catch (Exception e) {
+                System.out.println("Could not send file.");
+                return null;
+            }
+            sendFileAndArguments(socket, ClientTokens.arm, cmdArgs, nonce, sendFile);
         }
-        sendFileAndArguments(socket, ClientTokens.arm, cmdArgs, nonce,sendFile);
+        else{
+            sendArguments(socket, ClientTokens.arm, cmdArgs, nonce);
+        }
 
         // ===== RECEIVE 3 =====
         // Receive-3 -> { len +  { len + response || Nonce }Kc,s }
         return receiveResponse(socket, nonce);
     }
 
-    private static void sendFileAndArguments(SSLSocket socket, AccessResponseModel arm, String cmdArgs, long nonce, byte[] file){
+    private static void sendFileAndArguments(SSLSocket socket, AccessResponseModel arm, String cmdArgs, long nonce, byte[] file) {
         // mkdir username path
         // ["mkdir", "username path"]
         String[] cmdArgsNoCommand = cmdArgs.split(" ", 2);
@@ -368,7 +328,7 @@ public abstract class ClientCommands {
         for (String arg : arguments) {
             argNonceSize += Integer.BYTES + arg.getBytes().length;
         }
-        argNonceSize+= Integer.BYTES + file.length;
+        argNonceSize += Integer.BYTES + file.length;
         argNonceSize += Long.BYTES;
 
         byte[] argNonce = new byte[argNonceSize];
@@ -378,7 +338,7 @@ public abstract class ClientCommands {
             MySSLUtils.putLengthAndBytes(bb, arg.getBytes());
         }
         bb.putLong(nonce);
-        MySSLUtils.putLengthAndBytes(bb,file);
+        MySSLUtils.putLengthAndBytes(bb, file);
 
         byte[] argNonceEncrypted = CryptoStuff.symEncrypt(arm.clientService_key, argNonce);
 
@@ -388,7 +348,6 @@ public abstract class ClientCommands {
         MySSLUtils.putLengthAndBytes(bb, argNonceEncrypted);
         MySSLUtils.sendData(socket, dataToSend3);
     }
-
 
     private static void sendArguments(SSLSocket socket, AccessResponseModel arm, String cmdArgs, long nonce) {
         // mkdir username path
@@ -424,11 +383,10 @@ public abstract class ClientCommands {
         ResponsePackage rp3 = ResponsePackage.parse(receivedPayload3);
 
         if (rp3.getCode() == CommonValues.ERROR_CODE) {
-            System.out.println("Error 3");
+            //System.out.println("Error retrieving response.");
             return null;
         }
 
-        System.out.println("Nonce wanted: " + nonce);
         byte[] content3 = rp3.getContent();
         ByteBuffer bb = ByteBuffer.wrap(content3);
 
@@ -439,9 +397,8 @@ public abstract class ClientCommands {
         byte[] responseBytes2 = MySSLUtils.getNextBytes(bb);
         long nonce2 = bb.getLong();
 
-        System.out.println("Nonce received: " + nonce2);
         if (nonce != nonce2) {
-            System.out.println("Nonces don't match");
+            //System.out.println("Could not .");
             return null;
         }
 
@@ -469,7 +426,7 @@ public abstract class ClientCommands {
         ResponsePackage rp = ResponsePackage.parse(receivedPayload2);
 
         if (rp.getCode() == CommonValues.ERROR_CODE) {
-            System.out.println("Error 1");
+            System.out.println("Error authenticating service.");
             return false;
         }
 
@@ -478,7 +435,7 @@ public abstract class ClientCommands {
         bb = ByteBuffer.wrap(rChallengeResponseDecrypted);
         long rChallengeResponseLong = bb.getLong();
         if (rChallengeResponseLong != rChallenge) {
-            System.out.println("Service could not respond to challenge");
+            //System.out.println("Service could not respond to challenge");
             return false;
         }
 

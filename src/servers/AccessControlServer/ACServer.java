@@ -22,7 +22,7 @@ public class ACServer {
     private static final String PASSWORD = "ac123456";
     private static final boolean DO_CLIENT_AUTH = true;
 
-    private static final String[] usernames = { "alice", "bob", "carol", "david", "eric" };
+    private static final String[] usernames = {"alice", "bob", "carol", "david", "eric"};
 
     private static final Set<Long> nonceSet = new HashSet<>();
 
@@ -31,8 +31,9 @@ public class ACServer {
     private static byte[] executeCommand(Socket socket, DataPackage dp) {
         switch (dp.getCommand()) {
             case ACCESS:
-                return AccessControlServer.access(socket, nonceSet, dp.getContent(),users);
+                return AccessControlServer.access(socket, nonceSet, dp.getContent(), users);
             default:
+                System.out.println("Received unknown command.");
                 return new byte[0];
         }
     }
@@ -78,12 +79,12 @@ public class ACServer {
         try {
             Class.forName("org.sqlite.JDBC");
 
-            users = new AccessControlSQL("users","perms.db");
-            users.insert("alice",CommonValues.SS_ID,CommonValues.PERM_READ_WRITE);
-            users.insert("bob",CommonValues.SS_ID,CommonValues.PERM_READ);
-            users.insert("carol",CommonValues.SS_ID,CommonValues.PERM_DENY);
-            users.insert("david",CommonValues.SS_ID,CommonValues.PERM_DENY);
-            users.insert("eric",CommonValues.SS_ID,CommonValues.PERM_READ);
+            users = new AccessControlSQL("users", "perms.db");
+            users.insert("alice", CommonValues.SS_ID, CommonValues.PERM_READ_WRITE);
+            users.insert("bob", CommonValues.SS_ID, CommonValues.PERM_READ_WRITE);
+            users.insert("carol", CommonValues.SS_ID, CommonValues.PERM_READ);
+            users.insert("david", CommonValues.SS_ID, CommonValues.PERM_DENY);
+            users.insert("eric", CommonValues.SS_ID, CommonValues.PERM_DENY);
         } catch (Exception e) {
             System.out.println("Error while trying to initialize database.");
             e.printStackTrace();

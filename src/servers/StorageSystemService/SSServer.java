@@ -98,10 +98,7 @@ public class SSServer {
     }
 
     public static void main(String[] args) throws Exception {
-
-
         System.setProperty("javax.net.ssl.trustStore", SERVER_TRUSTSTORE_PATH);
-
 
         initConf();
         initDirs();

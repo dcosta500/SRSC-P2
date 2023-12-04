@@ -159,12 +159,10 @@ public class StorageServiceServer {
                 contentEncrypted = ServiceFilePackage.writeFileBytes(new ServiceFilePackage(contentOfExistingFile), fileContent, userPath);
             }
             Files.write(directory, contentEncrypted != null ? contentEncrypted : new byte[0], StandardOpenOption.CREATE);
-            response = "Sucessfully created file".getBytes();
+            response = "Successfully created file.".getBytes();
         } catch (Exception e) {
-            response = "Failed to create file".getBytes();
-            System.out.println("username: " + username);
-            System.out.println("userPath: " + userPath);
-            System.out.println("path: " + path);
+            System.out.println("Error in creating file.");
+            return MySSLUtils.buildErrorResponse();
         }
 
         // ===== SEND 2 =====
@@ -175,7 +173,6 @@ public class StorageServiceServer {
 
         MySSLUtils.putLengthAndBytes(bb, response);
         bb.putLong(nonce);
-
 
         byte[] responseEncrypted = CryptoStuff.symEncrypt(clientServiceKey, responseDecrypted);
 
@@ -372,9 +369,9 @@ public class StorageServiceServer {
         /* *
          * Data flow:
          * Receive-1 -> { len + IPClient || len + KvToken || len + AuthClient2 || R }
-         * AuthClient2 = { len + { len + IDClient || len + TS || Nonce }Kc,s }
-         * Kvtoken = { len + { len + uid || len + IpClient || len + IdService || len + TSi || len + TSf || len + Kc,s  || len + perms ||
-         *               SIGac(len + uid || len + IpClient || len + IdService || len + TSi || len + TSf || len + Kc,s  || len + perms) } Kac,s }
+         * AuthClient2 = { len + IDClient || len + TS || Nonce }Kc,s
+         * Kvtoken = { len + { len + kvtoken_content || len + SIGac( kvtoken_content ) } Kac,s }
+         * kvtoken_content = { len + uid || len + IpClient || len + IdService || len + TSi || len + TSf || len + Kc,s  || len + perms }
          *
          * Send-1 -> { len + { R }Kc,s }
          * Receive-2 -> { len + IPClient || { len + arguments || Nonce }Kc,s }
@@ -384,6 +381,7 @@ public class StorageServiceServer {
         // ===== RECEIVE-SEND-1 & RECEIVE-2 =====
         byte[] receivedContent = receiveRequest(Command.MKDIR, mdSocket, content, nonceSet);
         if (receivedContent == null) {
+            System.out.println("Could not receive content.");
             return MySSLUtils.buildErrorResponse();
         }
 
@@ -395,13 +393,27 @@ public class StorageServiceServer {
 
         // Unpack arguments and nonce
         bb = ByteBuffer.wrap(arguments);
-        String userPath = new String(MySSLUtils.getNextBytes(bb));
-        String path = new String(MySSLUtils.getNextBytes(bb));
+        String userPath = new String(MySSLUtils.getNextBytes(bb)); // username in the command
+        String path = new String(MySSLUtils.getNextBytes(bb)); // path in the command
         long nonce = bb.getLong();
 
         // Command Logic
-        String directoryPath = DEFAULT_DIR + "/" + userPath + "/" + path;
+
+        // Folders are premade for the users and no additional folders can be created.
+        String rootDir = DEFAULT_DIR + "/" + userPath;
+        if(!Files.exists(Paths.get(rootDir))){
+            System.out.println("Root dir does not exist.");
+            return MySSLUtils.buildErrorResponse();
+        }
+
+        String directoryPath =  rootDir + "/" + path;
         Path directory = Paths.get(directoryPath);
+
+        if(Files.exists(directory)){
+            System.out.println("Directory already exists.");
+            return MySSLUtils.buildErrorResponse();
+        }
+
         byte[] response;
         try {
             Files.createDirectories(directory); // createDirectories() creates parent directories if they don't exist
@@ -413,7 +425,6 @@ public class StorageServiceServer {
 
         // ===== SEND 2 =====
         // { len + { len + Response || Nonce }Kc,s }
-
         byte[] responseDecrypted = new byte[Integer.BYTES + response.length + Long.BYTES];
         bb = ByteBuffer.wrap(responseDecrypted);
 
@@ -450,6 +461,7 @@ public class StorageServiceServer {
 
         Key clientServiceKey = CryptoStuff.parseSymKeyFromBytes(clientServiceKeyBytes);
 
+        // Command Logic
         String directoryPath = DEFAULT_DIR + "/" + userPath + "/" + path;
         Path file = Paths.get(directoryPath);
         if (!Files.exists(file)) {
@@ -488,6 +500,15 @@ public class StorageServiceServer {
 
 
     // ===== AUX METHODS =====
+    /**
+     * Receives request. Service authenticates itself to the client and receives arguments of the command (potentially
+     * data too).
+     * @param command Command to be executed
+     * @param mdSocket Main Dispatcher socket.
+     * @param content Content of the command
+     * @param nonceSet Nonce set to spot retransmissions
+     * @return ClientId, client_service_key, arguments and nonce, all bundled together.
+     */
     private static byte[] receiveRequest(Command command, Socket mdSocket, byte[] content, Set<Long> nonceSet) {
         /* *
          * Data flow:

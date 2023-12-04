@@ -21,9 +21,9 @@ public class AuthenticationServer {
         /* 
         * Data flow:
         * Receive-1 -> { len + IPclient || len + uid }
-        * Send-1 -> { Secure Random (long) || len+Yauth }
-        * Receive-2 -> { len + IPclient || len + Yclient || len + { Secure Random }Kpwd }
-        * Send-2 -> { len+{ len+"auth" || len+Ktoken1024 || len+TSf || Secure Random (long) || len+Kclient,ac }Kdh || 
+        * Send-1 -> { R (long) || len+Yauth }
+        * Receive-2 -> { len + IPclient || len + Yclient || len + { R }Kpwd }
+        * Send-2 -> send2content || SIGauth(){ len + { len+"auth" || len+Ktoken1024 || len+TSf || Secure Random (long) || len+Kclient,ac }Kdh ||
         * len+{ len+"auth" || len+Ktoken1024 || len+TSf || Secure Random (long) || len+Kclient,ac }SIGauth }
         *
         * Ktoken1024 = { len + Ktoken1024_content || len + { Ktoken1024_content }SIGauth }Kauth,ac
@@ -46,10 +46,9 @@ public class AuthenticationServer {
 
         // Processing
         String conditionR1 = String.format("uid = '%s'", uidR1);
-        ResultSet rs = users.select("uid, canBeAuthenticated, hPwd", conditionR1);
 
         String hPwd = null;
-        try {
+        try(ResultSet rs = users.select("uid, canBeAuthenticated, hPwd", conditionR1)) {
             if (!rs.next())
                 return MySSLUtils.buildErrorResponse();
 
@@ -58,7 +57,7 @@ public class AuthenticationServer {
             if (!canBeAuthenticated)
                 return MySSLUtils.buildErrorResponse();
         } catch (Exception e) {
-            e.printStackTrace();
+            System.out.println("Error while trying to access database.");
             return MySSLUtils.buildErrorResponse();
         }
 
@@ -76,7 +75,6 @@ public class AuthenticationServer {
 
         byte[] dataToSendS1 = new byte[totalSize];
         bb = ByteBuffer.wrap(dataToSendS1);
-
 
         bb.putLong(srS1);
 
@@ -101,14 +99,16 @@ public class AuthenticationServer {
         byte[] cipheredSrR2 = MySSLUtils.getNextBytes(bb);
 
         // Processing
-        if (!ipClientR1.equals(ipClientR2))
+        if (!ipClientR1.equals(ipClientR2)){
+            System.out.println("IPClients are not the same.");
             return MySSLUtils.buildErrorResponse();
+        }
 
         Key pbeKey = CryptoStuff.pbeCreateKeyFromPassword(hPwd);
 
         byte[] receivedSrR2 = CryptoStuff.pbeDecrypt(pbeKey, cipheredSrR2);
         if (receivedSrR2.length == 0) {
-            // Password is probably wrong
+            System.out.println("Error decrypting challenge.");
             return MySSLUtils.buildErrorResponse();
         }
 
@@ -121,18 +121,14 @@ public class AuthenticationServer {
         Key dhKey = CryptoStuff.dhCreateKeyFromSharedSecret(dhSecret);
 
         // ===== SEND 2 =====
-        /**
-        * Send-2 -> { len+{ len+"auth" || len+Ktoken1024 || len+TSf || Secure Random (long) || len+Kclient,ac }Kdh || 
-        * len+{ len+"auth" || len+Ktoken1024 || len+TSf || Secure Random (long) || len+Kclient,ac }SIGauth }
+        /* *
+        * Send-2 -> { len + {send2content}Kdh || SIGauth(send2content) }
         *
-        * Ktoken1024 = { len+{ len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac } ||
-        *              len+{ len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }SIGauth } Kauth,ac
-        */
-
-        // Ktoken1024
-
-        // Private key for signing
-        //PrivateKey privKey = CryptoStuff.parsePrivateKeyFromPemFormat("certs/asCrypto/as_priv.key");
+        * send2content = { len+"auth" || len+Ktoken1024 || len+TSf || R || len+Kclient,ac }
+        *
+        * Ktoken1024 = { len + Ktoken1024_content || len + { Ktoken1024_content }SIGauth }Kauth,ac
+        * Ktoken1024_content = { len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }
+        * */
         PrivateKey privKey = CryptoStuff.getPrivateKeyFromKeystore("as", "as123456");
         if (privKey == null)
             return MySSLUtils.buildErrorResponse();
@@ -143,12 +139,17 @@ public class AuthenticationServer {
         byte[] tsi_bytes_S2 = tsi_S2.toString().getBytes();
         byte[] tsf_bytes_S2 = tsf_S2.toString().getBytes();
 
-        byte[] clientACSymKey_bytes_S2 = CryptoStuff.generateSymKey().getEncoded();
+        Key client_ac_key = CryptoStuff.generateSymKey();
+        if(client_ac_key == null){
+            System.out.println("Could not generate symmetric key for client and access control.");
+            return MySSLUtils.buildErrorResponse();
+        }
+        byte[] client_ac_key_bytes = client_ac_key.getEncoded();
 
         byte[] ktoken1024 = createKToken1024(uidBytesR1, ipClientBytesR1, tsi_bytes_S2, tsf_bytes_S2,
-                clientACSymKey_bytes_S2, privKey);
+                client_ac_key_bytes, privKey);
 
-        byte[] finalSend = createLoginFinalSend(ktoken1024, tsf_bytes_S2, clientACSymKey_bytes_S2, srS1, dhKey,
+        byte[] finalSend = createLoginFinalSend(ktoken1024, tsf_bytes_S2, client_ac_key_bytes, srS1, dhKey,
                 privKey);
 
         return MySSLUtils.buildResponse(CommonValues.OK_CODE, finalSend);
@@ -158,8 +159,8 @@ public class AuthenticationServer {
     // Login
     private static byte[] createLoginFinalSend(byte[] ktoken1024, byte[] tsfBytes, byte[] client_ac_symKey_bytes,
             long secureRandom, Key dhKey, PrivateKey privKey) {
-        byte[] authId_S2 = CommonValues.AUTH_ID.getBytes();
 
+        byte[] authId_S2 = CommonValues.AUTH_ID.getBytes();
         int finalSend_firstHalf_size = 4 * Integer.BYTES + authId_S2.length + ktoken1024.length + tsfBytes.length
                 + Long.BYTES + client_ac_symKey_bytes.length;
 
