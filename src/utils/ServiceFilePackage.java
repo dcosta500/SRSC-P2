@@ -7,6 +7,7 @@ import java.security.Key;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.time.Instant;
+import java.util.Base64;
 
 public class ServiceFilePackage {
 
@@ -38,7 +39,7 @@ public class ServiceFilePackage {
         byte[] signature = MySSLUtils.getNextBytes(bb);
 
         // Verify signature
-        PublicKey pubKey = CryptoStuff.getPublicKeyFromTruststore("ss", "ss123456");
+        PublicKey pubKey = CryptoStuff.getPublicKeyFromCertificate("ss", System.getProperty("user.dir")+"/certs/ssCrypto/ss.cer","ss123456");
         if (!CryptoStuff.verifySignature(pubKey, fileContent, signature)) {
             System.out.println("Signature does not match in the file.");
             System.out.println("File is corrupted.");
@@ -47,8 +48,14 @@ public class ServiceFilePackage {
 
         // Unpack
         bb = ByteBuffer.wrap(fileContent);
+        byte[] metadata = MySSLUtils.getNextBytes(bb);
+        byte[] content = MySSLUtils.getNextBytes(bb);
+
+        bb= ByteBuffer.wrap(metadata);
         byte[] pathBytes = MySSLUtils.getNextBytes(bb);
+        System.out.println("Path bytes: " + new String(pathBytes, StandardCharsets.UTF_8));
         byte[] ownerBytes = MySSLUtils.getNextBytes(bb);
+        System.out.println("Owner Bytes: " + new String(ownerBytes, StandardCharsets.UTF_8));
         byte[] creationTimeBytes = MySSLUtils.getNextBytes(bb);
         byte[] lastWriteUserBytes = MySSLUtils.getNextBytes(bb);
         byte[] lastWriteTimeBytes = MySSLUtils.getNextBytes(bb);
@@ -63,6 +70,7 @@ public class ServiceFilePackage {
         this.lastWriteTime = Instant.parse(new String(lastWriteTimeBytes, StandardCharsets.UTF_8));
         this.lastReadUser = new String(lastReadUserBytes, StandardCharsets.UTF_8);
         this.lastReadTime = Instant.parse(new String(lastReadTimeBytes, StandardCharsets.UTF_8));
+        this.content = content;
 
         // Not corrupted
         return false;
@@ -111,14 +119,15 @@ public class ServiceFilePackage {
          * metadata = { len + path || len + owner || len + TSCreation || len + lastChangedUser || len + TSLastChanged || len + lastReadUser || len + TSLastRead }
          * */
 
+        Instant now = Instant.now();
         // Metadata
         byte[] pathBytes = path.getBytes();
         byte[] ownerBytes = owner.getBytes();
         byte[] tsCreation = Instant.now().toString().getBytes();
         byte[] writeAuthorBytes = owner.getBytes(); // Changed
-        byte[] tsLastChangedBytes = Instant.now().toString().getBytes(); // Changed
-        byte[] lastReadUserBytes = new byte[0];
-        byte[] tsLastReadBytes = new byte[0];
+        byte[] tsLastChangedBytes = now.toString().getBytes();// Changed
+        byte[] lastReadUserBytes = owner.getBytes();
+        byte[] tsLastReadBytes = now.toString().getBytes();
 
         byte[] metadata = constructMetadata(pathBytes, ownerBytes, tsCreation, writeAuthorBytes, tsLastChangedBytes, lastReadUserBytes, tsLastReadBytes);
 

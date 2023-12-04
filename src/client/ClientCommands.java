@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.security.Key;
 import java.security.KeyPair;
 import java.security.PublicKey;
@@ -15,10 +16,7 @@ import java.util.Base64;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
-import client.responseModels.AccessResponseModel;
-import client.responseModels.LoginResponseModel;
-import client.responseModels.MakedirResponseModel;
-import client.responseModels.PutFileResponseModel;
+import client.responseModels.*;
 import utils.Command;
 import utils.CommonValues;
 import utils.CryptoStuff;
@@ -195,6 +193,18 @@ public abstract class ClientCommands {
         return new PutFileResponseModel(response);
     }
 
+    public static GetFileResponseModel get(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs){
+        String response = executeReadCommand(Command.GET, socket, auth_ktoken1024, client_auth_key, uid, cmdArgs);
+
+        writeFromGet(response,cmdArgs);;
+        return new GetFileResponseModel(response);
+    }
+
+    public static ListResponseModel list(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs) {
+        String response = executeReadCommand(Command.LIST, socket, auth_ktoken1024, client_auth_key, uid, cmdArgs);
+        return new ListResponseModel(response);
+    }
+
     // ===== AUX METHODS =====
     private static AccessResponseModel access(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid) {
         /* *
@@ -295,6 +305,18 @@ public abstract class ClientCommands {
         // ===== RECEIVE 3 =====
         // Receive-3 -> { len +  { len + response || Nonce }Kc,s }
         return receiveResponse(socket, nonce);
+    }
+
+    private static void writeFromGet(String content,String cmdArgs){
+
+        String[] args = cmdArgs.split(" ");
+        Path pathToFile = Paths.get(DEFAULT_GET_DIR).resolve(args[1]).resolve(args[2]);
+        try {
+            Files.createDirectories(pathToFile.getParent());
+            Files.write(pathToFile, content.getBytes(), StandardOpenOption.CREATE);
+        } catch (Exception e) {
+            System.out.println("Morreram todos");
+        }
     }
 
     private static String executeWriteCommand(Command command, SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs) {

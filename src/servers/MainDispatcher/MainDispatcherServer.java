@@ -56,6 +56,10 @@ public class MainDispatcherServer {
                 return MainDispatcher.makedir(socket,dp.getContent());
             case PUT:
                 return MainDispatcher.put(socket,dp.getContent());
+            case GET:
+                return MainDispatcher.get(socket,dp.getContent());
+            case LIST:
+                return MainDispatcher.list(socket,dp.getContent());
             default:
                 return new byte[0];
         }

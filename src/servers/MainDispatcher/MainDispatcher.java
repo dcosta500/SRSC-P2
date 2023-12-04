@@ -117,6 +117,12 @@ public class MainDispatcher {
     public static byte[] put(Socket clientSocket, byte[] content){
         return executeWriteCommand(clientSocket,content,Command.PUT);
     }
+    public static byte[] get(Socket clientSocket, byte[] content){
+        return executeReadCommand(clientSocket,content,Command.GET);
+    }
+    public static byte[] list(Socket clientSocket, byte[] content){
+        return executeReadCommand(clientSocket,content,Command.LIST);
+    }
 
     // ===== Aux Methods =====
     private static byte[] executeReadCommand(Socket clientSocket, byte[] content, Command command){

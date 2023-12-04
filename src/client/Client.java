@@ -3,9 +3,7 @@ package client;
 import javax.net.ServerSocketFactory;
 import javax.net.ssl.*;
 
-import client.responseModels.LoginResponseModel;
-import client.responseModels.MakedirResponseModel;
-import client.responseModels.PutFileResponseModel;
+import client.responseModels.*;
 import utils.*;
 
 import java.io.FileInputStream;
@@ -68,6 +66,12 @@ public class Client {
                     break;
                 case PUT:
                     put(cmd);
+                    break;
+                case GET:
+                    get(cmd);
+                    break;
+                case LIST:
+                    list(cmd);
                     break;
                 default:
                     break masterLoop;
@@ -150,6 +154,58 @@ public class Client {
         }
 
         System.out.println(prm.getMessage());
+    }
+
+
+    private static void get(String cmd) {
+        if (!ClientValidator.putValidator(cmd)) {
+            System.out.println("Command is not correctly formatted");
+            return;
+        }
+
+        if (ClientTokens.lrm.ktoken1024 == null) {
+            System.out.println("You haven't logged in yet.");
+            return;
+        }
+
+        GetFileResponseModel gfm = ClientCommands.get(socket, ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey,
+                uid, cmd);
+        processGetResponse(gfm);
+    }
+
+    private static void processGetResponse(GetFileResponseModel gfm) {
+        if (gfm == null) {
+            return;
+        }
+        System.out.println(gfm.getResponse());
+    }
+
+    private static void list(String cmd) {
+        if (!ClientValidator.listValidator(cmd)) {
+            System.out.println("Command is not correctly formatted");
+            return;
+        }
+
+        if (ClientTokens.lrm.ktoken1024 == null) {
+            System.out.println("You haven't logged in yet.");
+            return;
+        }
+
+        if(cmd.split(" ").length == 2){ // list home root
+            cmd += " /";
+        }
+
+        ListResponseModel lrm = ClientCommands.list(socket, ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey,
+                uid, cmd);
+        processListResponse(lrm);
+    }
+
+
+    private static void processListResponse(ListResponseModel lrm) {
+        if (lrm == null) {
+            return;
+        }
+        System.out.println(lrm.getFiles());
     }
 
     private static void processClientConfFile() {

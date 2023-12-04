@@ -4,6 +4,7 @@ import utils.*;
 
 
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.nio.file.*;
 import java.net.Socket;
 import java.nio.ByteBuffer;
@@ -40,27 +41,37 @@ public class StorageServiceServer {
         byte[] userIdBytes = MySSLUtils.getNextBytes(bb);
         byte[] clientServiceKeyBytes = MySSLUtils.getNextBytes(bb);
         byte[] arguments = MySSLUtils.getNextBytes(bb);
+
+        String username = new String(userIdBytes, StandardCharsets.UTF_8);
+
+        // Unpack arguments and nonce
+        bb = ByteBuffer.wrap(arguments);
+
+        String userPath = new String(MySSLUtils.getNextBytes(bb), StandardCharsets.UTF_8);
+        String path = new String(MySSLUtils.getNextBytes(bb), StandardCharsets.UTF_8);
+
         long nonce2 = bb.getLong();
 
-        // arguments = len + username
-        bb = ByteBuffer.wrap(arguments);
-        String username = new String(MySSLUtils.getNextBytes(bb));
-        String path = new String(MySSLUtils.getNextBytes(bb));
         Path directory;
-        if (path.length() <= 1) {
+        if (path.isEmpty()) {
             directory = Paths.get(DEFAULT_DIR + "/" + username);
         } else {
-            directory = Paths.get(DEFAULT_DIR + "/" + username + "/" + path);
+            directory = Paths.get(DEFAULT_DIR + "/" + username + "/" + path+"/");
         }
 
+        System.err.println("directory: " + directory);
         byte[] response;
         try {
             DirectoryStream<Path> directoryStream;
             directoryStream = Files.newDirectoryStream(directory);
-            String directories = "";
-            for (Path entry : directoryStream)
-                directories = directories.concat(entry.getFileName() + "\n");
-            response = directories.getBytes();
+            List<String> directoriesList = new ArrayList<>();
+            for (Path entry : directoryStream){
+                System.out.println("Once");
+                System.out.println(entry.getFileName());
+                directoriesList.add(entry.getFileName().toString());
+            }
+            System.out.println(Arrays.toString(directoriesList.toArray(String[]::new)));
+            response = Arrays.toString(directoriesList.toArray(String[]::new)).getBytes();
         } catch (Exception e) {
             System.err.println("directory: " + directory);
             System.err.println("username: " + username);
@@ -186,14 +197,15 @@ public class StorageServiceServer {
 
         ByteBuffer bb = ByteBuffer.wrap(receivedContent);
         byte[] userIdBytes = MySSLUtils.getNextBytes(bb);
+        String username = new String(userIdBytes,StandardCharsets.UTF_8);
         byte[] clientServiceKeyBytes = MySSLUtils.getNextBytes(bb);
         byte[] arguments = MySSLUtils.getNextBytes(bb);
-        long nonce2 = bb.getLong();
-        // arguments = len + username || len + path/file
+
+        // Unpack arguments and nonce
         bb = ByteBuffer.wrap(arguments);
         String userPath = new String(MySSLUtils.getNextBytes(bb));
-        String username = Arrays.toString(userIdBytes);
         String path = new String(MySSLUtils.getNextBytes(bb));
+        long nonce2 = bb.getLong();
 
         Key clientServiceKey = CryptoStuff.parseSymKeyFromBytes(clientServiceKeyBytes);
 
@@ -215,6 +227,7 @@ public class StorageServiceServer {
             System.out.println("username: " + username);
             System.out.println("userPath: " + userPath);
             System.out.println("path: " + path);
+            System.out.println("Directory path: " + directoryPath);
             return MySSLUtils.buildErrorResponse();
         }
         byte[] response = fileRead.getContent();
