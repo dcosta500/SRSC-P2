@@ -20,9 +20,9 @@ public class AuthenticationServer {
     public static byte[] login(Socket mdSocket, SQL users, byte[] content) {
         /* 
         * Data flow:
-        * Receive-1 -> { len+IPclient || len+uid }
+        * Receive-1 -> { len + IPclient || len + uid }
         * Send-1 -> { Secure Random (long) || len+Yauth }
-        * Receive-2 -> { len+IPclient || len+Yclient || len+{ Secure Random }Kpwd }
+        * Receive-2 -> { len + IPclient || len + Yclient || len + { Secure Random }Kpwd }
         * Send-2 -> { len+{ len+"auth" || len+Ktoken1024 || len+TSf || Secure Random (long) || len+Kclient,ac }Kdh || 
         * len+{ len+"auth" || len+Ktoken1024 || len+TSf || Secure Random (long) || len+Kclient,ac }SIGauth }
         *
@@ -143,7 +143,7 @@ public class AuthenticationServer {
         byte[] tsi_bytes_S2 = tsi_S2.toString().getBytes();
         byte[] tsf_bytes_S2 = tsf_S2.toString().getBytes();
 
-        byte[] clientACSymKey_bytes_S2 = CryptoStuff.createSymKey().getEncoded();
+        byte[] clientACSymKey_bytes_S2 = CryptoStuff.generateSymKey().getEncoded();
 
         byte[] ktoken1024 = createKToken1024(uidBytesR1, ipClientBytesR1, tsi_bytes_S2, tsf_bytes_S2,
                 clientACSymKey_bytes_S2, privKey);

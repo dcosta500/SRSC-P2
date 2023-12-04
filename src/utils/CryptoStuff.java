@@ -13,7 +13,6 @@ import java.security.SecureRandom;
 import java.security.Signature;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.Random;
@@ -201,7 +200,7 @@ public abstract class CryptoStuff {
      * Creates a symmetric Key
      * @return random symmetric key
      */
-    public static Key createSymKey() {
+    public static Key generateSymKey() {
         try {
             KeyGenerator kg = KeyGenerator.getInstance(SYMMETRIC_ALG);
             kg.init(SYM_KEY_SIZE);

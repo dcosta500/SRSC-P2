@@ -27,8 +27,8 @@ public class AccessControlServer {
          *
          * AuthClient = { len + IdClient || len + TS || Nonce }Kc,AC
          *
-         * Ktoken1024 = { len + { len + uid || len + IPclient || len + IDac || len + TSi || len + TSf || len + Kclient,ac } ||
-         *              len+{ len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }SIGauth } Kauth,ac
+         * Ktoken1024 = { len + Ktoken1024_content || len + { Ktoken1024_content }SIGauth }Kauth,ac
+         * Ktoken1024_content = { len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }
          *
          * Kvtoken = { len + { len + kvtoken_content || len + SIGac( kvtoken_content ) } Kac,s }
          * kvtoken_content = { len + uid || len + IpClient || len + IdService || len + TSi || len + TSf || len + Kc,s  || len + perms }
@@ -36,10 +36,6 @@ public class AccessControlServer {
 
         // ===== Receive-1 =====
         // { len + ipClient || len + IdServiço || len + Ktoken1024 || len + AuthClient}
-        // AuthClient = { len + IdClient || len + IpClient || len + TS || Nonce }Kc,AC
-
-        // Ktoken1024 = { len + Ktoken1024_content || len + SIGauth(Ktoken1024_content) }Kauth,ac
-        // Ktoken1024_content = { len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }
 
         String ipClient;
 
@@ -48,8 +44,7 @@ public class AccessControlServer {
         byte[] ipClientBytes = MySSLUtils.getNextBytes(bb);
         byte[] idBytesService = MySSLUtils.getNextBytes(bb);
         byte[] Ktoken1024 = MySSLUtils.getNextBytes(bb);
-
-        byte[] authClientEncrypted = MySSLUtils.getNextBytes(bb);
+        byte[] authClient = MySSLUtils.getNextBytes(bb);
 
         ipClient = new String(ipClientBytes, StandardCharsets.UTF_8);
 
@@ -57,79 +52,83 @@ public class AccessControlServer {
         Key asAcSymmetricKey = CryptoStuff.parseSymKeyFromBase64(System.getProperty("SYM_KEY_AUTH_AC"));
         byte[] ktoken1024_deciphered = CryptoStuff.symDecrypt(asAcSymmetricKey, Ktoken1024);
 
-        Key clientAC = checkTokenValidity(ktoken1024_deciphered, ipClient);
+        Key clientAC = checkKtoken1024Validity(ktoken1024_deciphered, ipClient);
         if (clientAC == null){
-            System.out.println("Ktoken1024 is not.");
+            System.out.println("Ktoken1024 is not valid.");
             return MySSLUtils.buildErrorResponse();
         }
 
-        // AuthClient = { len + IdClient || len + TS || Nonce }Kc,ac
-        byte[] authClientDecrypted = CryptoStuff.symDecrypt(clientAC, authClientEncrypted);
-        bb = ByteBuffer.wrap(authClientDecrypted);
-
-        byte[] idClientB_auth = MySSLUtils.getNextBytes(bb);
-        byte[] timestampB_auth = MySSLUtils.getNextBytes(bb);
-
-        String idClient_auth = new String(idClientB_auth, StandardCharsets.UTF_8);
-        Instant timestamp_auth = Instant.parse(new String(timestampB_auth, StandardCharsets.UTF_8));
-
-        if (Instant.now().isAfter(timestamp_auth.plus(Duration.ofSeconds(CommonValues.CLIENT_AUTHENTICATOR_VALIDITY_SECONDS)))) {
-            System.out.println("Auth Client Expired.");
+        byte[] idClientBytes = checkClientAuthenticatorValidity(authClient, clientAC, nonceSet);
+        if(idClientBytes == null){
+            System.out.println("Invalid client authenticator.");
             return MySSLUtils.buildErrorResponse();
         }
-
-        if (!checkClientAuthenticatorValidity(idClient_token, idClient_auth)) {
-            System.out.println("Client authenticator is invalid.");
-            return MySSLUtils.buildErrorResponse();
-        }
-
-        long nonce = bb.getLong();
-        if (nonceSet.contains(nonce)) {
-            System.out.println("Retransmission detected.");
-            return MySSLUtils.buildErrorResponse();
-        }
-        nonceSet.add(nonce);
 
         // ===== Send-1 =====
         // { len+KeyC,Serviço || len+IdServiço || len+TSf || len+KvToken }Kc,ac
-        //Kvtoken = {  len+uid || len+IpClient || len+IdService|| ||len+TSi || len+TSf || len+Kc,servive  || len+perms || AssAc(token}Kac,s
 
         Instant tsi = Instant.now();
         Instant tsf = tsi.plus(Duration.ofHours(CommonValues.TOKEN_VALIDITY_HOURS));
 
-        Key client_service_key = CryptoStuff.createSymKey();
+        Key client_service_key = CryptoStuff.generateSymKey();
         if(client_service_key == null){
-            System.out.println("Could not create symmetric key for client and service.");
+            System.out.println("Could not generate a symmetric key for client and service.");
             return MySSLUtils.buildErrorResponse();
         }
+        byte[] client_service_key_bytes = client_service_key.getEncoded();
 
-        byte[] clientSSSymKey_bytes = client_service_key.getEncoded();
-
-        //KvToken
-        byte[] kvToken = buildTokenV(idClientB_auth, ipClientBytes, idBytesService, clientSSSymKey_bytes, tsi, tsf, users);
+        byte[] kvToken = buildTokenV(idClientBytes, ipClientBytes, idBytesService, client_service_key_bytes, tsi, tsf, users);
         if (kvToken == null){
             System.out.println("Could not build Kvtoken.");
             return MySSLUtils.buildErrorResponse();
         }
 
-        byte[] sendDecrypted = new byte[Integer.BYTES + clientSSSymKey_bytes.length + Integer.BYTES +
+        // Pack, Encrypt and send
+        byte[] sendDecrypted = new byte[Integer.BYTES + client_service_key_bytes.length + Integer.BYTES +
                 idBytesService.length + Integer.BYTES + tsf.toString().getBytes().length + Integer.BYTES + kvToken.length];
-
         bb = ByteBuffer.wrap(sendDecrypted);
-        MySSLUtils.putLengthAndBytes(bb, clientSSSymKey_bytes, idBytesService, tsf.toString().getBytes(), kvToken);
+
+        MySSLUtils.putLengthAndBytes(bb, client_service_key_bytes, idBytesService, tsf.toString().getBytes(), kvToken);
 
         byte[] sendEncrypted = CryptoStuff.symEncrypt(clientAC, sendDecrypted);
         return MySSLUtils.buildResponse(CommonValues.OK_CODE, sendEncrypted);
     }
 
     // ===== AUX METHODS =====
-    private static boolean checkClientAuthenticatorValidity(String idClient_auth, String idClient_token) {
-        return idClient_auth.equals(idClient_token);
+    private static byte[] checkClientAuthenticatorValidity(byte[] clientAuth, Key clientAC, Set<Long> nonceSet) {
+        // AuthClient = { len + IdClient || len + TS || Nonce }Kc,ac
+        byte[] authClientDecrypted = CryptoStuff.symDecrypt(clientAC, clientAuth);
+        ByteBuffer bb = ByteBuffer.wrap(authClientDecrypted);
+
+        byte[] idClientBytes_auth = MySSLUtils.getNextBytes(bb);
+        byte[] timestampBytes_auth = MySSLUtils.getNextBytes(bb);
+        long nonce = bb.getLong();
+
+        String idClient_auth = new String(idClientBytes_auth, StandardCharsets.UTF_8);
+        Instant timestamp_auth = Instant.parse(new String(timestampBytes_auth, StandardCharsets.UTF_8));
+
+        if (Instant.now().isAfter(timestamp_auth.plus(Duration.ofSeconds(CommonValues.CLIENT_AUTHENTICATOR_VALIDITY_SECONDS)))) {
+            System.out.println("Auth Client Expired.");
+            return null;
+        }
+
+        if (!idClient_token.equals(idClient_auth)) {
+            System.out.println("Client authenticator is invalid.");
+            return null;
+        }
+
+        if (nonceSet.contains(nonce)) {
+            System.out.println("Retransmission detected.");
+            return null;
+        }
+        nonceSet.add(nonce);
+
+        return idClientBytes_auth;
     }
 
-    private static Key checkTokenValidity(byte[] token, String ipClient) {
-        // token = { len+{ len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac } ||
-        //                len+{ len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }SIGauth }
+    private static Key checkKtoken1024Validity(byte[] token, String ipClient) {
+        // Ktoken1024 = { len + Ktoken1024_content || len + { Ktoken1024_content }SIGauth }Kauth,ac
+        // Ktoken1024_content = { len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }
 
         ByteBuffer bb = ByteBuffer.wrap(token);
 
@@ -165,7 +164,6 @@ public class AccessControlServer {
             return null;
         }
 
-        //Instant timestampInitial = Instant.parse(new String(tsiBytes, StandardCharsets.UTF_8));
         Instant timestampFinal = Instant.parse(new String(tsfBytes, StandardCharsets.UTF_8));
         if (Instant.now().isAfter(timestampFinal)) {
             MySSLUtils.printToLogFile("AccessControl", "Token life expired.");
