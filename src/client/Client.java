@@ -5,6 +5,7 @@ import javax.net.ssl.*;
 
 import client.responseModels.LoginResponseModel;
 import client.responseModels.MakedirResponseModel;
+import client.responseModels.PutFileResponseModel;
 import utils.*;
 
 import java.io.FileInputStream;
@@ -112,7 +113,7 @@ public class Client {
             return;
         }
 
-        MakedirResponseModel mdm = ClientCommands.mkdir(socket, auth_ktoken1024, null, client_ac_key,uid, cmd, factory);
+        MakedirResponseModel mdm = ClientCommands.mkdir(socket, ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey,uid, cmd, factory);
         processMakedirResponse(mdm);
     }
 

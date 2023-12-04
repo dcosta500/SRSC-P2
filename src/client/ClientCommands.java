@@ -2,6 +2,9 @@ package client;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.Key;
 import java.security.KeyPair;
 import java.security.PublicKey;
@@ -21,69 +24,8 @@ import utils.MySSLUtils;
 import utils.ResponsePackage;
 
 public abstract class ClientCommands {
-    public static void sum(SSLSocket socket) {
-        // Input: { command(int) | length(int) | content(byte[]) }
-        // content: {int}
-
-        // Output: { code(int) | length(int) | content(byte[])}
-
-        // ===== Build Content Input =====
-        byte[] inputContent = new byte[Integer.BYTES];
-        ByteBuffer bb = ByteBuffer.wrap(inputContent);
-
-        bb.putInt(0, 5);
-
-        // ===== Send Content =====
-        byte[] dataOut = MySSLUtils.buildPackage(Command.SUM, inputContent);
-        MySSLUtils.sendData(socket, dataOut);
-
-        // ===== Receive Response =====
-        byte[] dataIn = MySSLUtils.receiveData(socket);
-        ResponsePackage rp = ResponsePackage.parse(dataIn);
-
-        // ===== Unpack Response =====
-        if (rp.getCode() == CommonValues.ERROR_CODE) {
-            System.out.println("Error code received. Aborting...");
-            return;
-        }
-
-        bb = ByteBuffer.wrap(rp.getContent());
-
-        int result = bb.getInt(0);
-        System.out.println("Result: " + result);
-    }
-
-    public static void mult(SSLSocket socket) {
-        // Input: { command(int) | length(int) | content(byte[]) }
-        // content: {int}
-
-        // Output: { code(int) | length(int) | content(byte[])}
-
-        // ===== Build Content Input =====
-        byte[] inputContent = new byte[Integer.BYTES];
-        ByteBuffer bb = ByteBuffer.wrap(inputContent);
-
-        bb.putInt(0, 5);
-
-        // ===== Send Content =====
-        byte[] dataOut = MySSLUtils.buildPackage(Command.MULT, inputContent);
-        MySSLUtils.sendData(socket, dataOut);
-
-        // ===== Receive Response =====
-        byte[] dataIn = MySSLUtils.receiveData(socket);
-        ResponsePackage rp = ResponsePackage.parse(dataIn);
-
-        // ===== Unpack Response =====
-        if (rp.getCode() == CommonValues.ERROR_CODE) {
-            System.out.println("Error code received. Aborting...");
-            return;
-        }
-
-        bb = ByteBuffer.wrap(rp.getContent());
-
-        int result = bb.getInt(0);
-        System.out.println("Result: " + result);
-    }
+    private static final String DEFAULT_PUT_DIR = System.getProperty("user.dir") + "/clientFiles/putRoot/";
+    private static final String DEFAULT_GET_DIR = System.getProperty("user.dir") + "/clientFiles/getRoot/";
 
     public static LoginResponseModel login(SSLSocket socket, String cmd) {
         /* *
@@ -230,6 +172,12 @@ public abstract class ClientCommands {
         return new MakedirResponseModel(response);
     }
 
+    public static PutFileResponseModel put(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs, SSLSocketFactory factory) {
+        String response = executeWriteCommand(Command.PUT, socket, auth_ktoken1024, client_auth_key, uid, cmdArgs, factory);
+        return new PutFileResponseModel(response);
+    }
+
+
     // ===== AUX METHODS =====
     private static AccessResponseModel access(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid) {
         /* *
@@ -309,19 +257,17 @@ public abstract class ClientCommands {
 
         // ===== ACCESS =====
         SSLSocket acSocket = startConnectionToMDServer(factory);
-        if (arm == null)
-            arm = access(acSocket, auth_ktoken1024, client_auth_key, uid);
+        if (ClientTokens.arm == null) ClientTokens.arm = access(acSocket, auth_ktoken1024, client_auth_key, uid);
         MySSLUtils.closeConnectionToServer(acSocket);
 
-        if (arm == null) {
+        if (ClientTokens.arm == null) {
             System.out.println("Could not retrieve from Access Control");
             return null;
         }
 
-        System.out.println("Access Control with success.");
 
         // ===== AUTHENTICATE SERVICE =====
-        if (!authenticateService(socket, arm, arm.clientService_key, uid)) {
+        if (!authenticateService(Command.MKDIR, socket, ClientTokens.arm.clientService_key, uid)) {
             System.out.println("Could not authenticate service server.");
             return null;
         }
@@ -329,7 +275,69 @@ public abstract class ClientCommands {
         // ===== SEND 3 =====
         //{ len + { len + arguments || Nonce }Kc,s }
         long nonce = CryptoStuff.getRandom();
-        sendArguments(socket, arm, cmdArgs, nonce);
+        sendArguments(socket, ClientTokens.arm, cmdArgs, nonce);
+
+        // ===== RECEIVE 3 =====
+        // Receive-3 -> { len +  { len + response || Nonce }Kc,s }
+        return receiveResponse(socket, nonce);
+    }
+
+    private static String executeWriteCommand(Command command, SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs, SSLSocketFactory factory) {
+        /* Data Flow:
+         * Send-1 -> { len + IDservice || len + Ktoken1024 || len + AUTHclient1 }
+         * Receive-1 -> { len + Kc,s || len + IDservice || len + TSf || len + Kvtoken }Kc,Ac
+         *
+         * Send-2 -> { len + Kvtoken || len + AUTHclient2 || R (long) }
+         * Receive-2 -> { { R }Kc,s }
+         * Send-3 -> { len + { len + arguments || Nonce }Kc,s }
+         * Receive-3 -> { len + { len + response || Nonce }Kc,s }
+         *
+         * AuthClient1 = { len + { len + IDClient || len + TS || Nonce }Kc,ac }
+         * AuthClient2 = { len + { len + IDClient || len + TS || Nonce }Kc,s }
+         *
+         * Kvtoken = { len + { len + kvtoken_content || len + SIGac( kvtoken_content ) } Kac,s }
+         * kvtoken_content = { len + uid || len + IpClient || len + IdService || len + TSi || len + TSf || len + Kc,s  || len + perms }
+         *
+         * Ktoken1024 = { len + Ktoken1024_content || len + { Ktoken1024_content }SIGauth }Kauth,ac
+         * Ktoken1024_content = { len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }
+         */
+
+        // ===== ACCESS =====
+        SSLSocket acSocket = startConnectionToMDServer(factory);
+        if (ClientTokens.arm == null) ClientTokens.arm = access(acSocket, auth_ktoken1024, client_auth_key, uid);
+        MySSLUtils.closeConnectionToServer(acSocket);
+
+        if (ClientTokens.arm == null) {
+            System.out.println("Could not retrieve from Access Control");
+            return null;
+        }
+
+        // ===== AUTHENTICATE SERVICE =====
+        if (!authenticateService(command, socket, ClientTokens.arm.clientService_key, uid)) {
+            System.out.println("Could not authenticate service server.");
+            return null;
+        }
+
+        // ===== SEND 3 =====
+        //{ len + { len + arguments || Nonce }Kc,s }
+        long nonce = CryptoStuff.getRandom();
+        sendArguments(socket, ClientTokens.arm, cmdArgs, nonce);
+        String[] args = cmdArgs.split(" ");
+
+        //==== Send 3.1 ====
+        Path pathToFile = Paths.get(DEFAULT_PUT_DIR).resolve(uid).resolve(args[2]);
+        try {
+            byte[] fileBytes = Files.readAllBytes(pathToFile);
+
+            byte[] encryptedFile = CryptoStuff.symEncrypt(ClientTokens.arm.clientService_key, fileBytes);
+            System.out.println(encryptedFile.length);
+            byte[] sendFile = new byte[Integer.BYTES + encryptedFile.length];
+            ByteBuffer bb = ByteBuffer.wrap(sendFile);
+            MySSLUtils.putLengthAndBytes(bb,encryptedFile);
+            MySSLUtils.sendFile(socket, sendFile);
+        } catch (Exception e) {
+            System.out.println("Morreram todos");
+        }
 
         // ===== RECEIVE 3 =====
         // Receive-3 -> { len +  { len + response || Nonce }Kc,s }
@@ -340,7 +348,6 @@ public abstract class ClientCommands {
         // mkdir username path
         // ["mkdir", "username path"]
         String[] cmdArgsNoCommand = cmdArgs.split(" ", 2);
-        System.out.printf("First arg: %s\n", cmdArgsNoCommand[0]);
         String[] arguments = cmdArgsNoCommand[1].split(" ");
 
         int argNonceSize = 0;
@@ -366,7 +373,7 @@ public abstract class ClientCommands {
         MySSLUtils.sendData(socket, dataToSend3);
     }
 
-    private static String receiveResponse(SSLSocket socket, AccessResponseModel arm, long nonce) {
+    private static String receiveResponse(SSLSocket socket, long nonce) {
         byte[] receivedPayload3 = MySSLUtils.receiveData(socket);
         ResponsePackage rp3 = ResponsePackage.parse(receivedPayload3);
 
@@ -379,7 +386,7 @@ public abstract class ClientCommands {
         ByteBuffer bb = ByteBuffer.wrap(content3);
 
         byte[] encryptedResponseNonce = MySSLUtils.getNextBytes(bb);
-        byte[] responseNonceDecrypted = CryptoStuff.symDecrypt(arm.clientService_key, encryptedResponseNonce);
+        byte[] responseNonceDecrypted = CryptoStuff.symDecrypt(ClientTokens.arm.clientService_key, encryptedResponseNonce);
 
         bb = ByteBuffer.wrap(responseNonceDecrypted);
         byte[] responseBytes2 = MySSLUtils.getNextBytes(bb);
@@ -393,19 +400,19 @@ public abstract class ClientCommands {
         return new String(responseBytes2, StandardCharsets.UTF_8);
     }
 
-    private static boolean authenticateService(SSLSocket socket, AccessResponseModel arm, Key client_auth_key, String uid) {
+    private static boolean authenticateService(Command command, SSLSocket socket, Key client_service_key, String uid) {
         // ===== SEND 2 =====
         // { len + Kvtoken || len + AUTHclient2 || R (long) }
         byte[] clientAuth2 = createClientAuthenticator(uid, client_service_key);
         long rChallenge = CryptoStuff.getRandom();
-        byte[] dataToSend2 = new byte[2 * Integer.BYTES + arm.kvtoken.length + clientAuth2.length + Long.BYTES];
+        byte[] dataToSend2 = new byte[2 * Integer.BYTES + ClientTokens.arm.kvtoken.length + clientAuth2.length + Long.BYTES];
 
         ByteBuffer bb = ByteBuffer.wrap(dataToSend2);
 
-        MySSLUtils.putLengthAndBytes(bb, arm.kvtoken, clientAuth2);
+        MySSLUtils.putLengthAndBytes(bb, ClientTokens.arm.kvtoken, clientAuth2);
         bb.putLong(rChallenge);
 
-        byte[] payload2 = MySSLUtils.buildPackage(Command.MKDIR, dataToSend2);
+        byte[] payload2 = MySSLUtils.buildPackage(command, dataToSend2);
         MySSLUtils.sendData(socket, payload2);
 
         // ===== RECEIVE 2 =====
@@ -418,7 +425,7 @@ public abstract class ClientCommands {
             return false;
         }
 
-        byte[] rChallengeResponseDecrypted = CryptoStuff.symDecrypt(arm.clientService_key, rp.getContent());
+        byte[] rChallengeResponseDecrypted = CryptoStuff.symDecrypt(ClientTokens.arm.clientService_key, rp.getContent());
 
         bb = ByteBuffer.wrap(rChallengeResponseDecrypted);
         long rChallengeResponseLong = bb.getLong();

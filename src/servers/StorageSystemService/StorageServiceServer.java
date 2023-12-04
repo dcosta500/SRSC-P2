@@ -107,7 +107,7 @@ public class StorageServiceServer {
 
         // Unpack from receiveRequest
         ByteBuffer bb = ByteBuffer.wrap(receivedContent);
-        byte[] userIdBytes = MySSLUtils.getNextBytes(bb);
+        byte[] username = MySSLUtils.getNextBytes(bb);
         byte[] clientServiceKeyBytes = MySSLUtils.getNextBytes(bb);
         byte[] arguments = MySSLUtils.getNextBytes(bb);
 
@@ -139,8 +139,7 @@ public class StorageServiceServer {
         byte[] response;
         try {
             if (!Files.exists(directory)) {
-                Files.createFile(directory);
-                contentEncrypted = ServiceFilePackage.createFileBytes(fileContent, username, path);
+                contentEncrypted = ServiceFilePackage.createFileBytes(fileContent, new String(username,StandardCharsets.UTF_8), path);
             } else {
                 byte[] contentOfExistingFile = Files.readAllBytes(directory);
                 contentEncrypted = ServiceFilePackage.writeFileBytes(new ServiceFilePackage(contentOfExistingFile), fileContent, userPath);
@@ -475,7 +474,6 @@ public class StorageServiceServer {
         byte[] authClient2 = MySSLUtils.getNextBytes(bb);
         long rChallenge = bb.getLong();
 
-        System.out.printf("Challenge: %d\n", rChallenge);
 
         // Kvtoken
         // Kvtoken = { len + { len + kvtoken_content || len + SIGac( kvtoken_content ) } Kac,s }

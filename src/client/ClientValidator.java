@@ -9,4 +9,8 @@ public abstract class ClientValidator {
     public static boolean makedirValidator(String cmd) {
         return cmd.split(" ").length == 3;
     }
+
+    public static boolean putValidator(String cmd){
+        return cmd.split(" ").length == 3;
+    }
 }
