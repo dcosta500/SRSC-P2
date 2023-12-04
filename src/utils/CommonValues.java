@@ -30,6 +30,7 @@ public abstract class CommonValues {
     public static final String SS_ID = "storage";
 
     // Time
+    public static final int CLIENT_AUTHENTICATOR_VALIDITY_SECONDS = 5;
     public static final int TOKEN_VALIDITY_HOURS = 24;
 
     // Packages

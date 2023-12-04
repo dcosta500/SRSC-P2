@@ -4,7 +4,6 @@ import utils.CommonValues;
 import utils.CryptoStuff;
 import utils.MySSLUtils;
 import utils.SQL;
-
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -14,7 +13,6 @@ import java.security.PublicKey;
 import java.sql.ResultSet;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Base64;
 import java.util.Set;
 
 public class AccessControlServer {
@@ -44,7 +42,6 @@ public class AccessControlServer {
         // Ktoken1024_content = { len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }
 
         String ipClient;
-        String idService;
 
         ByteBuffer bb = ByteBuffer.wrap(content);
 
@@ -55,16 +52,16 @@ public class AccessControlServer {
         byte[] authClientEncrypted = MySSLUtils.getNextBytes(bb);
 
         ipClient = new String(ipClientBytes, StandardCharsets.UTF_8);
-        idService = new String(idBytesService, StandardCharsets.UTF_8);
 
         // Unpack token
         Key asAcSymmetricKey = CryptoStuff.parseSymKeyFromBase64(System.getProperty("SYM_KEY_AUTH_AC"));
-        byte[] decipheredToken = CryptoStuff.symDecrypt(asAcSymmetricKey, Ktoken1024);
+        byte[] ktoken1024_deciphered = CryptoStuff.symDecrypt(asAcSymmetricKey, Ktoken1024);
 
-        Key clientAC = checkTokenValidity(decipheredToken, ipClient);
-        if (clientAC == null) return MySSLUtils.buildErrorResponse();
-
-        System.out.println("Ktoken1024 is valid.");
+        Key clientAC = checkTokenValidity(ktoken1024_deciphered, ipClient);
+        if (clientAC == null){
+            System.out.println("Ktoken1024 is not.");
+            return MySSLUtils.buildErrorResponse();
+        }
 
         // AuthClient = { len + IdClient || len + TS || Nonce }Kc,ac
         byte[] authClientDecrypted = CryptoStuff.symDecrypt(clientAC, authClientEncrypted);
@@ -76,13 +73,13 @@ public class AccessControlServer {
         String idClient_auth = new String(idClientB_auth, StandardCharsets.UTF_8);
         Instant timestamp_auth = Instant.parse(new String(timestampB_auth, StandardCharsets.UTF_8));
 
-        if (Instant.now().isAfter(timestamp_auth.plus(Duration.ofSeconds(5)))) {
-            System.out.println("Auth Client Expired");
+        if (Instant.now().isAfter(timestamp_auth.plus(Duration.ofSeconds(CommonValues.CLIENT_AUTHENTICATOR_VALIDITY_SECONDS)))) {
+            System.out.println("Auth Client Expired.");
             return MySSLUtils.buildErrorResponse();
         }
 
         if (!checkClientAuthenticatorValidity(idClient_token, idClient_auth)) {
-            System.out.println("Not matching id");
+            System.out.println("Client authenticator is invalid.");
             return MySSLUtils.buildErrorResponse();
         }
 
@@ -99,12 +96,21 @@ public class AccessControlServer {
 
         Instant tsi = Instant.now();
         Instant tsf = tsi.plus(Duration.ofHours(CommonValues.TOKEN_VALIDITY_HOURS));
-        byte[] clientSSSymKey_bytes = CryptoStuff.createSymKey().getEncoded();
+
+        Key client_service_key = CryptoStuff.createSymKey();
+        if(client_service_key == null){
+            System.out.println("Could not create symmetric key for client and service.");
+            return MySSLUtils.buildErrorResponse();
+        }
+
+        byte[] clientSSSymKey_bytes = client_service_key.getEncoded();
 
         //KvToken
         byte[] kvToken = buildTokenV(idClientB_auth, ipClientBytes, idBytesService, clientSSSymKey_bytes, tsi, tsf, users);
-        if (kvToken == null)
+        if (kvToken == null){
+            System.out.println("Could not build Kvtoken.");
             return MySSLUtils.buildErrorResponse();
+        }
 
         byte[] sendDecrypted = new byte[Integer.BYTES + clientSSSymKey_bytes.length + Integer.BYTES +
                 idBytesService.length + Integer.BYTES + tsf.toString().getBytes().length + Integer.BYTES + kvToken.length];
@@ -142,7 +148,7 @@ public class AccessControlServer {
         byte[] idClientBytes = MySSLUtils.getNextBytes(bb);
         byte[] ipClientBytes = MySSLUtils.getNextBytes(bb);
         byte[] idACBytes = MySSLUtils.getNextBytes(bb);
-        byte[] tsiBytes = MySSLUtils.getNextBytes(bb);
+        /*byte[] tsiBytes =*/ MySSLUtils.getNextBytes(bb);
         byte[] tsfBytes = MySSLUtils.getNextBytes(bb);
         byte[] keyClientACBytes = MySSLUtils.getNextBytes(bb);
 
@@ -189,7 +195,6 @@ public class AccessControlServer {
             perms = result.getString("permission");
         } catch (Exception e) {
             System.out.println("Could not complete query for permissions");
-            e.printStackTrace();
             return null;
         }
 

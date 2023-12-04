@@ -67,7 +67,6 @@ public abstract class MySQLiteUtils {
      */
     public static ResultSet select(Connection conn, String tableName, String columns, String condition) {
         try {
-            System.out.println(String.format("SELECT %s FROM %s WHERE %s", columns, tableName, condition));
             String query = String.format("SELECT %s FROM %s WHERE %s", columns, tableName, condition);
             PreparedStatement ps = conn.prepareStatement(query);
             return ps.executeQuery();

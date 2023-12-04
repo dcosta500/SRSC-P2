@@ -3,14 +3,11 @@ package utils;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
-
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.time.Instant;
-import java.util.Base64;
 
 public class ServiceFilePackage {
-
     private final boolean isCorrupted;
     private String path;
     private String owner;
