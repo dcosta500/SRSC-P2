@@ -128,10 +128,6 @@ public class MainDispatcher {
         return content;
     }
 
-    public static byte[] makedir(Socket clientSocket, byte[] content){
-        return executeCommand(clientSocket,content,Command.MKDIR);
-    }
-
     public static byte[] access(Socket clientSocket, byte[] content) {
         /*
          * Data flow (basically add client ip before redirecting to auth server):
@@ -157,6 +153,12 @@ public class MainDispatcher {
         return content;
     }
 
+    public static byte[] makedir(Socket clientSocket, byte[] content){
+        return executeCommand(clientSocket,content,Command.MKDIR);
+    }
+
+
+
     // ===== Aux Methods =====
     private static byte[] executeCommand(Socket clientSocket, byte[] content, Command command){
 
@@ -166,6 +168,7 @@ public class MainDispatcher {
         content = MySSLUtils.receiveData(clientSocket);
         //===== Send 1 from ss =====
         byte[] dataToSend_S2 = addClientIPToBeggining(clientSocket, content);
+        SSLSocket ssSocket = startConnectiontoSSServer();
         MySSLUtils.sendData(ssSocket, MySSLUtils.buildPackage(command, dataToSend_S2));
 
         //===== Receive 2 from ss =====

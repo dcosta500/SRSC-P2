@@ -10,7 +10,6 @@ public class AccessResponseModel {
     public byte[] kvtoken;
     public Instant timestampFinal;
     public Key clientService_key;
-
     public String serviceId;
 
     public AccessResponseModel(byte[] kvtoken, Instant timestampFinal, Key clientService_key, String serviceId) {

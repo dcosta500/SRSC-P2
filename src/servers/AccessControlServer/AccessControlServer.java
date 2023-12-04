@@ -51,6 +51,7 @@ public class AccessControlServer {
         byte[] ipClientBytes = MySSLUtils.getNextBytes(bb);
         byte[] idBytesService = MySSLUtils.getNextBytes(bb);
         byte[] Ktoken1024 = MySSLUtils.getNextBytes(bb);
+
         byte[] authClientEncrypted = MySSLUtils.getNextBytes(bb);
 
         ipClient = new String(ipClientBytes, StandardCharsets.UTF_8);

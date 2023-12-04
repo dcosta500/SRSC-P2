@@ -326,19 +326,37 @@ public class StorageServiceServer {
     }
 
     public static byte[] mkdir(Socket mdSocket, byte[] content, Set<Long> nonceSet) {
+        /* *
+         * Data flow:
+         * Receive-1 -> { len + IPClient || len + KvToken || len + AuthClient2 || R }
+         * AuthClient2 = { len + { len + IDClient || len + TS || Nonce }Kc,s }
+         * Kvtoken = { len + { len + uid || len + IpClient || len + IdService || len + TSi || len + TSf || len + Kc,s  || len + perms ||
+         *               SIGac(len + uid || len + IpClient || len + IdService || len + TSi || len + TSf || len + Kc,s  || len + perms) } Kac,s }
+         *
+         * Send-1 -> { len + { R }Kc,s }
+         * Receive-2 -> { len + IPClient || { len + arguments || Nonce }Kc,s }
+         * Send-2 -> { len + { len + Response || Nonce }Kc,s }
+         * */
+
+        // ===== RECEIVE-SEND-1 & RECEIVE-2 =====
         byte[] receivedContent = receiveRequest(Command.MKDIR, mdSocket, content, nonceSet);
         if (receivedContent == null) {
             return MySSLUtils.buildErrorResponse();
         }
+
+        // Unpack from receiveRequest
         ByteBuffer bb = ByteBuffer.wrap(receivedContent);
         byte[] userIdBytes = MySSLUtils.getNextBytes(bb);
         byte[] clientServiceKeyBytes = MySSLUtils.getNextBytes(bb);
-        byte[] arguments = MySSLUtils.getNextBytes(bb); //len+(len + userPath || len + path || len + content)
+        byte[] arguments = MySSLUtils.getNextBytes(bb);
+
+        // Unpack arguments and nonce
         bb = ByteBuffer.wrap(arguments);
         String userPath = new String(MySSLUtils.getNextBytes(bb));
         String path = new String(MySSLUtils.getNextBytes(bb));
-        long nonce2 = bb.getLong();
-        Key clientServiceKey = CryptoStuff.parseSymKeyFromBytes(clientServiceKeyBytes);
+        long nonce = bb.getLong();
+
+        // Command Logic
         String directoryPath = DEFAULT_DIR + "/" + userPath + "/" + path;
         Path directory = Paths.get(directoryPath);
         byte[] response;
@@ -365,10 +383,14 @@ public class StorageServiceServer {
         bb = ByteBuffer.wrap(responseDecrypted);
 
         MySSLUtils.putLengthAndBytes(bb, response);
-        bb.putLong(nonce2);
+        bb.putLong(nonce);
+
+        Key clientServiceKey = CryptoStuff.parseSymKeyFromBytes(clientServiceKeyBytes);
         byte[] responseEncrypted = CryptoStuff.symEncrypt(clientServiceKey, responseDecrypted);
+
         byte[] dataToSend = new byte[Integer.BYTES + responseEncrypted.length];
         bb = ByteBuffer.wrap(dataToSend);
+
         MySSLUtils.putLengthAndBytes(bb, responseEncrypted);
 
 
@@ -439,41 +461,53 @@ public class StorageServiceServer {
         byte[] authClient2 = MySSLUtils.getNextBytes(bb);
         long rChallenge = bb.getLong();
 
+        System.out.printf("Challenge: %d\n", rChallenge);
+
+        // Kvtoken
+        // Kvtoken = { len + { len + kvtoken_content || len + SIGac( kvtoken_content ) } Kac,s }
+        // kvtoken_content = { len + uid || len + IpClient || len + IdService || len + TSi || len + TSf || len + Kc,s  || len + perms }
+
         // KvToken Decryption
-        Key asAcSymmetricKey = CryptoStuff.parseSymKeyFromBase64(System.getProperty("SYM_KEY_AC_SS"));
-        byte[] kvtokenDecrypted = CryptoStuff.symDecrypt(asAcSymmetricKey, kvToken);
+        Key acSsSymKey = CryptoStuff.parseSymKeyFromBase64(System.getProperty("SYM_KEY_AC_SS"));
+        byte[] kvtokenDecrypted = CryptoStuff.symDecrypt(acSsSymKey, kvToken);
         bb = ByteBuffer.wrap(kvtokenDecrypted);
 
         byte[] kvtokenContent = MySSLUtils.getNextBytes(bb);
         byte[] kvtokenSig = MySSLUtils.getNextBytes(bb);
 
         PublicKey acPublicKey = CryptoStuff.getPublicKeyFromTruststore("ac", "ss123456");
-        if (CryptoStuff.verifySignature(acPublicKey, kvtokenContent, kvtokenSig)) {
+        if (!CryptoStuff.verifySignature(acPublicKey, kvtokenContent, kvtokenSig)) {
             System.out.println("Signature wasn't Valid");
             return null;
         }
 
-        // Kvtoken
         bb = ByteBuffer.wrap(kvtokenContent);
-
-        byte[] idClient = MySSLUtils.getNextBytes(bb);
+        byte[] idClientToken = MySSLUtils.getNextBytes(bb);
         byte[] ipClientToken = MySSLUtils.getNextBytes(bb);
-        byte[] idService = MySSLUtils.getNextBytes(bb);
-        String idServiceName = new String(idService, StandardCharsets.UTF_8);
-        if (!idServiceName.equals(CommonValues.SS_ID)) {
-            System.out.println("Token not valid for this service, expected " + CommonValues.SS_ID + " got " + idServiceName);
+        byte[] idServiceToken = MySSLUtils.getNextBytes(bb);
+
+        String idServiceNameToken = new String(idServiceToken, StandardCharsets.UTF_8);
+        if (!idServiceNameToken.equals(CommonValues.SS_ID)) {
+            System.out.println("Token not valid for this service, expected " + CommonValues.SS_ID + " got " + idServiceNameToken);
             return null;
         }
+
         Instant timestampInitial = Instant.parse(new String(MySSLUtils.getNextBytes(bb), StandardCharsets.UTF_8));
         Instant timestampFinal = Instant.parse(new String(MySSLUtils.getNextBytes(bb), StandardCharsets.UTF_8));
         Key clientServiceKey = CryptoStuff.parseSymKeyFromBytes(MySSLUtils.getNextBytes(bb));
         byte[] permissions = MySSLUtils.getNextBytes(bb);
 
-        //Check permissions
-        if (!checkPerms(permissions, command)) return null;
+        // Check permissions
+        if (!checkPerms(permissions, command)) {
+            System.out.println("Not enough permissions for this command.");
+            return null;
+        }
 
-        //AuthClient2
-        if (!checkAuth(authClient2, nonceSet, idClient, ipClient, ipClientToken, timestampFinal)) return null;
+        // AuthClient2
+        if (!checkAuth(clientServiceKey, authClient2, nonceSet, idClientToken, ipClient, ipClientToken, timestampFinal)) {
+            System.out.println("Client Authenticator is invalid.");
+            return null;
+        }
 
         // ===== SEND 1 ====
         byte[] rChallengeBytes = new byte[Long.BYTES];
@@ -500,10 +534,10 @@ public class StorageServiceServer {
         byte[] encryptedArgsAndNonce = MySSLUtils.getNextBytes(bb);
         byte[] argsAndNonce = CryptoStuff.symDecrypt(clientServiceKey, encryptedArgsAndNonce);
 
-        byte[] dataReceived = new byte[3 * Integer.BYTES + idClient.length + clientServiceKey.getEncoded().length + argsAndNonce.length];
+        byte[] dataReceived = new byte[3 * Integer.BYTES + idClientToken.length + clientServiceKey.getEncoded().length + argsAndNonce.length];
         bb = ByteBuffer.wrap(dataReceived);
 
-        MySSLUtils.putLengthAndBytes(bb, idClient, clientServiceKey.getEncoded(), argsAndNonce);
+        MySSLUtils.putLengthAndBytes(bb, idClientToken, clientServiceKey.getEncoded(), argsAndNonce);
 
         return dataReceived;
     }
@@ -537,6 +571,7 @@ public class StorageServiceServer {
 
     private static boolean checkPerms(byte[] permissions, Command command) {
         String perms = new String(permissions, StandardCharsets.UTF_8);
+
         switch (command) {
             case GET, LIST, FILECMD:
                 if (perms.equals(CommonValues.PERM_DENY)) return false;

@@ -7,7 +7,9 @@ import java.security.KeyPair;
 import java.security.PublicKey;
 import java.time.Instant;
 import java.util.Base64;
+import javax.net.ServerSocketFactory;
 import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 
 import client.responseModels.AccessResponseModel;
 import client.responseModels.LoginResponseModel;
@@ -248,12 +250,16 @@ public abstract class ClientCommands {
         byte[] serviceIDbytes = CommonValues.STORAGE_SERVICE_ID.getBytes();
         byte[] clientAuthenticator = createClientAuthenticator(uid, client_auth_key);
 
-        byte[] dataToSend1 = new byte[Integer.BYTES + serviceIDbytes.length + Integer.BYTES + auth_ktoken1024.length
-                + Integer.BYTES + clientAuthenticator.length];
+        byte[] dataToSend1 = new byte[3 * Integer.BYTES + serviceIDbytes.length + auth_ktoken1024.length + clientAuthenticator.length];
 
         ByteBuffer bb = ByteBuffer.wrap(dataToSend1);
 
         MySSLUtils.putLengthAndBytes(bb, serviceIDbytes, auth_ktoken1024, clientAuthenticator);
+
+        //System.out.printf("ServiceID: %s\n",Base64.getEncoder().encodeToString(serviceIDbytes));
+        //System.out.printf("Token1024: %s\n", Base64.getEncoder().encodeToString(auth_ktoken1024));
+        //System.out.printf("authClient: %s\n", Base64.getEncoder().encodeToString(clientAuthenticator));
+        //System.out.printf("ServiceID: %s\n", Base64.getEncoder().encodeToString(dataToSend1));
 
         MySSLUtils.sendData(socket, MySSLUtils.buildPackage(Command.ACCESS, dataToSend1));
 
@@ -287,7 +293,7 @@ public abstract class ClientCommands {
          * Receive-1 -> { len + Kc,s || len + IDservice || len + TSf || len + Kvtoken }Kc,Ac
          *
          * Send-2 -> { len + Kvtoken || len + AUTHclient2 || R (long) }
-         * Receive-2 -> { len + { R }Kc,s }
+         * Receive-2 -> { { R }Kc,s }
          * Send-3 -> { len + { len + arguments || Nonce }Kc,s }
          * Receive-3 -> { len + { len + response || Nonce }Kc,s }
          *
@@ -302,6 +308,7 @@ public abstract class ClientCommands {
          */
 
         // ===== ACCESS =====
+        SSLSocket acSocket = startConnectionToMDServer(factory);
         if (arm == null)
             arm = access(socket, auth_ktoken1024, client_auth_key, uid);
 
@@ -310,7 +317,7 @@ public abstract class ClientCommands {
             return null;
         }
 
-        System.out.printf("kvtoken: %s\n", Base64.getEncoder().encodeToString(arm.kvtoken));
+        System.out.println("Access Control with success.");
 
         // ===== AUTHENTICATE SERVICE =====
         if (!authenticateService(socket, arm, client_auth_key, uid)) {
@@ -331,7 +338,8 @@ public abstract class ClientCommands {
     private static void sendArguments(SSLSocket socket, AccessResponseModel arm, String cmdArgs, long nonce) {
         // mkdir username path
         // ["mkdir", "username path"]
-        String[] cmdArgsNoCommand = cmdArgs.split(" ", 1);
+        String[] cmdArgsNoCommand = cmdArgs.split(" ", 2);
+        System.out.printf("First arg: %s\n", cmdArgsNoCommand[0]);
         String[] arguments = cmdArgsNoCommand[1].split(" ");
 
         int argNonceSize = 0;
@@ -400,7 +408,7 @@ public abstract class ClientCommands {
         MySSLUtils.sendData(socket, payload2);
 
         // ===== RECEIVE 2 =====
-        // { len + { R }Kc,s }
+        // { { R }Kc,s }
         byte[] receivedPayload2 = MySSLUtils.receiveData(socket);
         ResponsePackage rp = ResponsePackage.parse(receivedPayload2);
 
@@ -409,11 +417,7 @@ public abstract class ClientCommands {
             return false;
         }
 
-        byte[] content = rp.getContent();
-        bb = ByteBuffer.wrap(content);
-
-        byte[] rChallengeResponse = MySSLUtils.getNextBytes(bb);
-        byte[] rChallengeResponseDecrypted = CryptoStuff.symDecrypt(arm.clientService_key, rChallengeResponse);
+        byte[] rChallengeResponseDecrypted = CryptoStuff.symDecrypt(arm.clientService_key, rp.getContent());
 
         bb = ByteBuffer.wrap(rChallengeResponseDecrypted);
         long rChallengeResponseLong = bb.getLong();
@@ -426,7 +430,7 @@ public abstract class ClientCommands {
         return true;
     }
 
-    private static byte[] createClientAuthenticator(String uid, Key client_auth_key) {
+    private static byte[] createClientAuthenticator(String uid, Key key) {
         try {
             long nonce = CryptoStuff.getRandom();
             byte[] uid_bytes = uid.getBytes();
@@ -446,5 +450,12 @@ public abstract class ClientCommands {
             e.printStackTrace();
         }
         return new byte[0];
+    }
+
+    private static SSLSocket startConnectionToMDServer(SSLSocketFactory factory) {
+        SSLSocket socket = MySSLUtils.startNewConnectionToServer(factory, CommonValues.MD_HOSTNAME,
+                CommonValues.MD_PORT_NUMBER);
+
+        return socket;
     }
 }
