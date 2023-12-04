@@ -2,7 +2,7 @@ package utils;
 
 public enum Command {
 
-    STATS("stats"),
+    TEST("test"), STATS("stats"),
     LOGIN("login"), ACCESS("access"),
     LIST("ls"), PUT("put"), GET("get"), COPY("cp"), REMOVE("rm"), MKDIR("mkdir"), FILECMD("file");
 

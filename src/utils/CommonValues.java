@@ -33,8 +33,8 @@ public abstract class CommonValues {
     public static final int TOKEN_VALIDITY_HOURS = 24;
 
     // Packages
-    public static final int DATA_SIZE = 2048;
-    public static final int FILE_SIZE = 16_000;
+    public static final int DATA_SIZE = 2_048;
+    public static final int FILE_SIZE = 2_048;
 
     // Error Codes
     public static final int OK_CODE = 0;

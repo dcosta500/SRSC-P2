@@ -26,7 +26,6 @@ public class ACServer {
 
     private static final Set<Long> nonceSet = new HashSet<>();
 
-
     private static SQL users;
 
     private static byte[] executeCommand(Socket socket, DataPackage dp) {
@@ -60,8 +59,6 @@ public class ACServer {
     private static void initConf() {
         Properties props = new Properties();
         String curDir = System.getProperty("user.dir");
-
-
 
         try (FileInputStream input = new FileInputStream(curDir + "/configs/access_control_server.conf")) {
             props.load(input);
@@ -108,7 +105,6 @@ public class ACServer {
             Socket socket;
             try {
                 System.out.println("Waiting for connection...");
-                assert ss != null;
                 socket = ss.accept();
                 System.out.println("Accepted a connection.");
             } catch (IOException e) {

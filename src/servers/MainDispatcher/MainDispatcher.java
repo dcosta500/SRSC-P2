@@ -2,6 +2,7 @@ package servers.MainDispatcher;
 
 import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.time.Instant;
 import java.util.Base64;
 
 import javax.net.ssl.SSLSocket;
@@ -12,6 +13,16 @@ import utils.Command;
 import utils.CommonValues;
 
 public class MainDispatcher {
+    public static byte[] test(Socket clientSocket, byte[] content) {
+        MySSLUtils.printToLogFile("MD", "TEST AT " + Instant.now().toString());
+        System.out.println("Executing test");
+        MySSLUtils.sendData(clientSocket, new byte[1]);
+        byte[] file = MySSLUtils.receiveData(clientSocket);
+
+        System.out.printf("Content length: %d\n", file.length);
+        System.out.printf("Content: %s\n", Base64.getEncoder().encodeToString(file));
+        return new byte[0];
+    }
 
     public static byte[] clientStats(Socket clientSocket, byte[] content) {
         try {
@@ -85,6 +96,8 @@ public class MainDispatcher {
          * Send-2: redirect
          */
 
+        System.out.println("===== ENTERED =====");
+
         // ===== Receive-1 from client =====
         // ...
 
@@ -105,7 +118,6 @@ public class MainDispatcher {
         return executeReadCommand(clientSocket,content,Command.MKDIR);
     }
     public static byte[] put(Socket clientSocket, byte[] content){
-        System.out.println("Executing put");
         return executeWriteCommand(clientSocket,content,Command.PUT);
     }
 
@@ -149,15 +161,22 @@ public class MainDispatcher {
         // ===== Send 2 to client =====
         MySSLUtils.sendData(clientSocket, content);
 
+        // arguments
+
         //===== Receive 3 from client =====
         content = MySSLUtils.receiveData(clientSocket);
 
-        // ===== Client file =====
-        byte[] fileBytes = MySSLUtils.receiveFile(clientSocket);
-
-        // ===== Send 3 to SS =====
+        // ===== Send 3 to SS ===== (args)
         byte[] dataToSend_S3 = addClientIPToBeggining(clientSocket, content);
         MySSLUtils.sendData(ssSocket, dataToSend_S3);
+
+        // ====== Signal to send ======
+        byte[] signalToSend = MySSLUtils.receiveData(ssSocket);
+
+        MySSLUtils.sendData(clientSocket, signalToSend);
+
+        // ===== Client file =====
+        byte[] fileBytes = MySSLUtils.receiveFile(clientSocket);
 
         // ==== SS Send file ====
         MySSLUtils.sendFile(ssSocket, fileBytes);
@@ -166,6 +185,7 @@ public class MainDispatcher {
         content = MySSLUtils.receiveData(ssSocket);
 
         // ===== Send 4 to client =====
+        MySSLUtils.closeConnectionToServer(ssSocket);
         return content;
     }
 

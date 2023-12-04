@@ -123,13 +123,16 @@ public class StorageServiceServer {
 
         Key clientServiceKey = CryptoStuff.parseSymKeyFromBytes(clientServiceKeyBytes);
 
+        // Signal to send content
+        MySSLUtils.sendData(mdSocket, new byte[1]);
+
         byte[] fileEncryptedWithlen = MySSLUtils.receiveFile(mdSocket);
         bb = ByteBuffer.wrap(fileEncryptedWithlen);
 
         byte[] fileEncrypted = MySSLUtils.getNextBytes(bb);
 
         byte[] fileContent = CryptoStuff.symDecrypt(clientServiceKey, fileEncrypted);
-        System.out.println(fileEncrypted.length);
+        System.out.println(Base64.getEncoder().encodeToString(fileEncryptedWithlen));
 
         if (!Files.exists(directory.getParent()) || !Files.isDirectory(directory.getParent())) {
             System.out.println("Directory does not exist.");
@@ -530,6 +533,8 @@ public class StorageServiceServer {
         byte[] payloadToSend = MySSLUtils.buildResponse(CommonValues.OK_CODE, encryptedRChallenge);
 
         MySSLUtils.sendData(mdSocket, payloadToSend);
+
+        System.out.println("Authenticated Myself");
 
         // ===== RECEIVE 2 =====
         // { len + IPClient || len + { len + arguments || Nonce }Kc,s }

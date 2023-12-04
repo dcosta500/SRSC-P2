@@ -27,6 +27,34 @@ public abstract class ClientCommands {
     private static final String DEFAULT_PUT_DIR = System.getProperty("user.dir") + "/clientFiles/putRoot/";
     private static final String DEFAULT_GET_DIR = System.getProperty("user.dir") + "/clientFiles/getRoot/";
 
+    public static void test(SSLSocket socket) {
+        MySSLUtils.sendData(socket, MySSLUtils.buildPackage(Command.TEST, new byte[0]));
+        MySSLUtils.receiveData(socket);
+        byte[] dataToSend = MySSLUtils.buildFilePackage(new byte[8_000]);
+
+        System.out.println("dataToSend length: " + dataToSend.length);
+        MySSLUtils.sendData(socket, new byte[1_000]);
+
+        System.out.println("4");
+    }
+
+    public static void stats(SSLSocket socket) {
+        byte[] dataToSend = MySSLUtils.buildPackage(Command.STATS, new byte[0]);
+        MySSLUtils.sendData(socket, dataToSend);
+
+        byte[] received = MySSLUtils.receiveData(socket);
+        ResponsePackage rp = ResponsePackage.parse(received);
+        ByteBuffer bb = ByteBuffer.wrap(rp.getContent());
+
+        int length = bb.getInt(0);
+        System.out.println("Length: " + length);
+
+        byte[] ipAddBytes = new byte[length];
+        bb.get(Integer.BYTES, ipAddBytes);
+
+        System.out.println("Ip: " + new String(ipAddBytes, StandardCharsets.UTF_8));
+    }
+
     public static LoginResponseModel login(SSLSocket socket, String cmd) {
         /* *
          * Data flow:
@@ -150,36 +178,19 @@ public abstract class ClientCommands {
         return LoginResponseModel.parse(uid, ktoken1024, tsf, key_bytes);
     }
 
-    public static void stats(SSLSocket socket) {
-        byte[] dataToSend = MySSLUtils.buildPackage(Command.STATS, new byte[0]);
-        MySSLUtils.sendData(socket, dataToSend);
-
-        byte[] received = MySSLUtils.receiveData(socket);
-        ResponsePackage rp = ResponsePackage.parse(received);
-        ByteBuffer bb = ByteBuffer.wrap(rp.getContent());
-
-        int length = bb.getInt(0);
-        System.out.println("Length: " + length);
-
-        byte[] ipAddBytes = new byte[length];
-        bb.get(Integer.BYTES, ipAddBytes);
-
-        System.out.println("Ip: " + new String(ipAddBytes, StandardCharsets.UTF_8));
-    }
-
-    public static MakedirResponseModel mkdir(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs, SSLSocketFactory factory) {
-        String response = executeReadCommand(Command.MKDIR, socket, auth_ktoken1024, client_auth_key, uid, cmdArgs, factory);
+    public static MakedirResponseModel mkdir(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs) {
+        String response = executeReadCommand(Command.MKDIR, socket, auth_ktoken1024, client_auth_key, uid, cmdArgs);
         return new MakedirResponseModel(response);
     }
 
-    public static PutFileResponseModel put(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs, SSLSocketFactory factory) {
-        String response = executeWriteCommand(Command.PUT, socket, auth_ktoken1024, client_auth_key, uid, cmdArgs, factory);
+    public static PutFileResponseModel put(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs) {
+        String response = executeWriteCommand(Command.PUT, socket, auth_ktoken1024, client_auth_key, uid, cmdArgs);
         return new PutFileResponseModel(response);
     }
 
-
     // ===== AUX METHODS =====
     private static AccessResponseModel access(SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid) {
+        System.out.println("Entered access");
         /* *
          * Data flow:
          * Send-1-> { len+IdService || len+token1024 || len+AuthClient}
@@ -209,7 +220,10 @@ public abstract class ClientCommands {
         //System.out.printf("authClient: %s\n", Base64.getEncoder().encodeToString(clientAuthenticator));
         //System.out.printf("ServiceID: %s\n", Base64.getEncoder().encodeToString(dataToSend1));
 
-        MySSLUtils.sendData(socket, MySSLUtils.buildPackage(Command.ACCESS, dataToSend1));
+        byte[] payloadToSend = MySSLUtils.buildPackage(Command.ACCESS, dataToSend1);
+        System.out.println("Payload: " + Base64.getEncoder().encodeToString(payloadToSend));
+        MySSLUtils.sendData(socket, payloadToSend);
+
 
         // ===== Receive-1 =====
         // { len+Kc,service || len+IdService || len+TSf || len+KvToken }Kc,ac
@@ -235,7 +249,7 @@ public abstract class ClientCommands {
         return AccessResponseModel.parse(key_c_service, serviceId_check, timestamp_final, kvToken);
     }
 
-    private static String executeReadCommand(Command command, SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs, SSLSocketFactory factory) {
+    private static String executeReadCommand(Command command, SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs) {
         /* Data Flow:
          * Send-1 -> { len + IDservice || len + Ktoken1024 || len + AUTHclient1 }
          * Receive-1 -> { len + Kc,s || len + IDservice || len + TSf || len + Kvtoken }Kc,Ac
@@ -256,56 +270,13 @@ public abstract class ClientCommands {
          */
 
         // ===== ACCESS =====
-        SSLSocket acSocket = startConnectionToMDServer(factory);
-        if (ClientTokens.arm == null) ClientTokens.arm = access(acSocket, auth_ktoken1024, client_auth_key, uid);
-        MySSLUtils.closeConnectionToServer(acSocket);
+        System.out.println("1 First access");
 
         if (ClientTokens.arm == null) {
-            System.out.println("Could not retrieve from Access Control");
-            return null;
+            SSLSocket acSocket = startConnectionToMDServer();
+            ClientTokens.arm = access(acSocket, auth_ktoken1024, client_auth_key, uid);
+            MySSLUtils.closeConnectionToServer(acSocket);
         }
-
-
-        // ===== AUTHENTICATE SERVICE =====
-        if (!authenticateService(Command.MKDIR, socket, ClientTokens.arm.clientService_key, uid)) {
-            System.out.println("Could not authenticate service server.");
-            return null;
-        }
-
-        // ===== SEND 3 =====
-        //{ len + { len + arguments || Nonce }Kc,s }
-        long nonce = CryptoStuff.getRandom();
-        sendArguments(socket, ClientTokens.arm, cmdArgs, nonce);
-
-        // ===== RECEIVE 3 =====
-        // Receive-3 -> { len +  { len + response || Nonce }Kc,s }
-        return receiveResponse(socket, nonce);
-    }
-
-    private static String executeWriteCommand(Command command, SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs, SSLSocketFactory factory) {
-        /* Data Flow:
-         * Send-1 -> { len + IDservice || len + Ktoken1024 || len + AUTHclient1 }
-         * Receive-1 -> { len + Kc,s || len + IDservice || len + TSf || len + Kvtoken }Kc,Ac
-         *
-         * Send-2 -> { len + Kvtoken || len + AUTHclient2 || R (long) }
-         * Receive-2 -> { { R }Kc,s }
-         * Send-3 -> { len + { len + arguments || Nonce }Kc,s }
-         * Receive-3 -> { len + { len + response || Nonce }Kc,s }
-         *
-         * AuthClient1 = { len + { len + IDClient || len + TS || Nonce }Kc,ac }
-         * AuthClient2 = { len + { len + IDClient || len + TS || Nonce }Kc,s }
-         *
-         * Kvtoken = { len + { len + kvtoken_content || len + SIGac( kvtoken_content ) } Kac,s }
-         * kvtoken_content = { len + uid || len + IpClient || len + IdService || len + TSi || len + TSf || len + Kc,s  || len + perms }
-         *
-         * Ktoken1024 = { len + Ktoken1024_content || len + { Ktoken1024_content }SIGauth }Kauth,ac
-         * Ktoken1024_content = { len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }
-         */
-
-        // ===== ACCESS =====
-        SSLSocket acSocket = startConnectionToMDServer(factory);
-        if (ClientTokens.arm == null) ClientTokens.arm = access(acSocket, auth_ktoken1024, client_auth_key, uid);
-        MySSLUtils.closeConnectionToServer(acSocket);
 
         if (ClientTokens.arm == null) {
             System.out.println("Could not retrieve from Access Control");
@@ -322,18 +293,72 @@ public abstract class ClientCommands {
         //{ len + { len + arguments || Nonce }Kc,s }
         long nonce = CryptoStuff.getRandom();
         sendArguments(socket, ClientTokens.arm, cmdArgs, nonce);
+
+        // ===== RECEIVE 3 =====
+        // Receive-3 -> { len +  { len + response || Nonce }Kc,s }
+        return receiveResponse(socket, nonce);
+    }
+
+    private static String executeWriteCommand(Command command, SSLSocket socket, byte[] auth_ktoken1024, Key client_auth_key, String uid, String cmdArgs) {
+        /* Data Flow:
+         * Send-1 -> { len + IDservice || len + Ktoken1024 || len + AUTHclient1 }
+         * Receive-1 -> { len + Kc,s || len + IDservice || len + TSf || len + Kvtoken }Kc,Ac
+         *
+         * Send-2 -> { len + Kvtoken || len + AUTHclient2 || R (long) }
+         * Receive-2 -> { { R }Kc,s }
+         * Send-3 -> { len + { len + arguments || Nonce }Kc,s }
+         * Receive-3 -> { len + { len + response || Nonce }Kc,s }
+         *
+         * AuthClient1 = { len + { len + IDClient || len + TS || Nonce }Kc,ac }
+         * AuthClient2 = { len + { len + IDClient || len + TS || Nonce }Kc,s }
+         *
+         * Kvtoken = { len + { len + kvtoken_content || len + SIGac( kvtoken_content ) } Kac,s }
+         * kvtoken_content = { len + uid || len + IpClient || len + IdService || len + TSi || len + TSf || len + Kc,s  || len + perms }
+         *
+         * Ktoken1024 = { len + Ktoken1024_content || len + { Ktoken1024_content }SIGauth }Kauth,ac
+         * Ktoken1024_content = { len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }
+         */
+
+        // ===== ACCESS =====
+        if (ClientTokens.arm == null) {
+            SSLSocket acSocket = startConnectionToMDServer();
+            ClientTokens.arm = access(acSocket, auth_ktoken1024, client_auth_key, uid);
+            MySSLUtils.closeConnectionToServer(acSocket);
+        }
+
+        if (ClientTokens.arm == null) {
+            System.out.println("Could not retrieve from Access Control");
+            return null;
+        }
+
+        // ===== AUTHENTICATE SERVICE =====
+        if (!authenticateService(command, socket, ClientTokens.arm.clientService_key, uid)) {
+            System.out.println("Could not authenticate service server.");
+            return null;
+        }
+
+        System.out.println("Authenticated Service");
+
+        // ===== SEND 3 =====
+        //{ len + { len + arguments || Nonce }Kc,s }
+        long nonce = CryptoStuff.getRandom();
+        sendArguments(socket, ClientTokens.arm, cmdArgs, nonce);
         String[] args = cmdArgs.split(" ");
+
+        // wait for signal
+        byte[] signalToSend = MySSLUtils.receiveData(socket);
+
+        System.out.println("Signal to send len: " + signalToSend.length);
 
         //==== Send 3.1 ====
         Path pathToFile = Paths.get(DEFAULT_PUT_DIR).resolve(uid).resolve(args[2]);
         try {
             byte[] fileBytes = Files.readAllBytes(pathToFile);
-
             byte[] encryptedFile = CryptoStuff.symEncrypt(ClientTokens.arm.clientService_key, fileBytes);
             System.out.println(encryptedFile.length);
             byte[] sendFile = new byte[Integer.BYTES + encryptedFile.length];
             ByteBuffer bb = ByteBuffer.wrap(sendFile);
-            MySSLUtils.putLengthAndBytes(bb,encryptedFile);
+            MySSLUtils.putLengthAndBytes(bb, encryptedFile);
             MySSLUtils.sendFile(socket, sendFile);
         } catch (Exception e) {
             System.out.println("Morreram todos");
@@ -457,7 +482,10 @@ public abstract class ClientCommands {
         return new byte[0];
     }
 
-    private static SSLSocket startConnectionToMDServer(SSLSocketFactory factory) {
+    private static SSLSocket startConnectionToMDServer() {
+        String keystorePath = String.format("certs/clients/%sCrypto/keystore_%s_cl.jks", ClientTokens.lrm.username, ClientTokens.lrm.username);
+        System.out.println("Keystore path: " + keystorePath);
+        SSLSocketFactory factory = MySSLUtils.createClientSocketFactory(keystorePath, "cl123456");
         SSLSocket socket = MySSLUtils.startNewConnectionToServer(factory, CommonValues.MD_HOSTNAME, CommonValues.MD_PORT_NUMBER);
 
         return socket;

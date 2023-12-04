@@ -42,7 +42,10 @@ public class MainDispatcherServer {
     }
 
     private static byte[] executeCommand(Socket socket, DataPackage dp) {
+        System.out.println("Executing command...");
         switch (dp.getCommand()) {
+            case TEST:
+                return MainDispatcher.test(socket, dp.getContent());
             case LOGIN:
                 return MainDispatcher.login(socket, dp.getContent());
             case STATS:

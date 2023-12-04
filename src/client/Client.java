@@ -54,6 +54,10 @@ public class Client {
             System.out.print(USERNAME_LOGGED + "Command -> ");
             String cmd = in.nextLine();
             switch (Command.valueOf(cmd.split(" ")[0].toUpperCase())) {
+                case TEST:
+                    System.out.println("TEST");
+                    ClientCommands.test(socket);
+                    break;
                 case STATS:
                     ClientCommands.stats(socket);
                     break;
@@ -61,10 +65,11 @@ public class Client {
                     login(cmd);
                     break;
                 case MKDIR:
-                    makedir(cmd,factory);
+                    makedir(cmd);
                     break;
                 case PUT:
-                    put(cmd,factory);
+                    System.out.println("PUT...");
+                    put(cmd);
                     break;
                 default:
                     break masterLoop;
@@ -76,14 +81,14 @@ public class Client {
     }
 
     // ===== COMMAND PROCESSING =====
-    private static void login(String cmd){
-        if (!ClientValidator.loginValidator(cmd)){
+    private static void login(String cmd) {
+        if (!ClientValidator.loginValidator(cmd)) {
             System.out.println("Command is not correctly formatted");
             return;
         }
 
         String name = cmd.split(" ")[1];
-        if(!name.equals(uid)){
+        if (!name.equals(uid)) {
             System.out.printf("This is not %s's computer.\n", name);
             return;
         }
@@ -102,8 +107,8 @@ public class Client {
         System.out.println("Login successfully done at: " + ClientTokens.lrm.timestampFinal.toString());
     }
 
-    private static void makedir(String cmd, SSLSocketFactory factory) {
-        if (!ClientValidator.makedirValidator(cmd)){
+    private static void makedir(String cmd) {
+        if (!ClientValidator.makedirValidator(cmd)) {
             System.out.println("Command is not correctly formatted");
             return;
         }
@@ -113,7 +118,7 @@ public class Client {
             return;
         }
 
-        MakedirResponseModel mdm = ClientCommands.mkdir(socket, ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey,uid, cmd, factory);
+        MakedirResponseModel mdm = ClientCommands.mkdir(socket, ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey, uid, cmd);
         processMakedirResponse(mdm);
     }
 
@@ -125,17 +130,18 @@ public class Client {
         System.out.println(mdm.getResponse());
     }
 
-    private static void put(String cmd, SSLSocketFactory factory){
-        if (!ClientValidator.putValidator(cmd)){
+    private static void put(String cmd) {
+        if (!ClientValidator.putValidator(cmd)) {
             System.out.println("Command is not correctly formatted");
             return;
         }
 
-        if (ClientTokens.lrm.ktoken1024 == null || ClientTokens.lrm.ktoken1024.length == 0) {
+        if (ClientTokens.lrm.ktoken1024 == null) {
             System.out.println("You haven't logged in yet.");
             return;
         }
-        PutFileResponseModel prm = ClientCommands.put(socket,ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey,uid, cmd, factory);
+        PutFileResponseModel prm = ClientCommands.put(socket, ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey,
+                uid, cmd);
         processPutResponse(prm);
     }
 
@@ -147,7 +153,7 @@ public class Client {
         System.out.println(prm.getMessage());
     }
 
-    private static void processClientConfFile(){
+    private static void processClientConfFile() {
         String client_conf_path = String.format("configs/clients/%s.conf", uid);
         Properties props = new Properties();
         try (FileInputStream input = new FileInputStream(client_conf_path)) {

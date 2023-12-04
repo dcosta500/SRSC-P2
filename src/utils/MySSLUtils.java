@@ -56,6 +56,7 @@ public abstract class MySSLUtils {
             assert ctx != null;
             return ctx.getSocketFactory();
         } catch (Exception e) {
+            e.printStackTrace();
             return null;
         }
     }
@@ -233,7 +234,7 @@ public abstract class MySSLUtils {
     public static void sendData(Socket socket, byte[] data) {
         try {
             OutputStream out = socket.getOutputStream();
-            socket.setSendBufferSize(CommonValues.DATA_SIZE);
+            socket.setSendBufferSize(CommonValues.FILE_SIZE);
             out.write(data);
             out.flush();
         } catch (Exception e) {
