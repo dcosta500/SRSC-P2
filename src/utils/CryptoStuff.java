@@ -99,6 +99,14 @@ public abstract class CryptoStuff {
         return new byte[0];
     }
 
+    public static byte[] b64ToBytes(String b64) {
+        return Base64.getDecoder().decode(b64);
+    }
+
+    public static String bytesToB64(byte[] bytes) {
+        return Base64.getEncoder().encodeToString(bytes);
+    }
+
     /**
      * Hash a byte array
      * @param content the content to be hashed
