@@ -53,9 +53,9 @@ public abstract class ClientCommands {
         // Receive-1 -> { Secure Random (long) || len+Yauth }
         byte[] content = MySSLUtils.receiveData(socket);
         ResponsePackage rp = ResponsePackage.parse(content);
-        byte[] dataReceived1 = rp.getContent();
+        byte[] dataReceived1 = rp.content();
 
-        if (rp.getCode() == CommonValues.ERROR_CODE) {
+        if (rp.code() == CommonValues.ERROR_CODE) {
             System.out.println("Could not do login (1)");
             return null;
         }
@@ -99,12 +99,12 @@ public abstract class ClientCommands {
         byte[] dataToReceive_R2 = MySSLUtils.receiveData(socket);
         rp = ResponsePackage.parse(dataToReceive_R2);
 
-        if (rp.getCode() == CommonValues.ERROR_CODE) {
+        if (rp.code() == CommonValues.ERROR_CODE) {
             System.out.println("Could not do login (2)");
             return null;
         }
 
-        content = rp.getContent();
+        content = rp.content();
         bb = ByteBuffer.wrap(content);
 
         byte[] encryptedBytes_R2 = MySSLUtils.getNextBytes(bb);
@@ -221,12 +221,12 @@ public abstract class ClientCommands {
         byte[] dataToReceive_R1 = MySSLUtils.receiveData(socket);
         ResponsePackage rp = ResponsePackage.parse(dataToReceive_R1);
 
-        if (rp.getCode() == CommonValues.ERROR_CODE) {
+        if (rp.code() == CommonValues.ERROR_CODE) {
             System.out.println("Could not do access control.");
             return null;
         }
 
-        byte[] content = CryptoStuff.symDecrypt(client_auth_key, rp.getContent());
+        byte[] content = CryptoStuff.symDecrypt(client_auth_key, rp.content());
 
         //  Kvtoken = { len + { len + kvtoken_content || len + SIGac( kvtoken_content ) } Kac,s }
         //  kvtoken_content = { len + uid || len + IpClient || len + IdService || len + TSi || len + TSf || len + Kc,s  || len + perms }
@@ -381,12 +381,12 @@ public abstract class ClientCommands {
         byte[] receivedPayload3 = MySSLUtils.receiveData(socket);
         ResponsePackage rp3 = ResponsePackage.parse(receivedPayload3);
 
-        if (rp3.getCode() == CommonValues.ERROR_CODE) {
+        if (rp3.code() == CommonValues.ERROR_CODE) {
             //System.out.println("Error retrieving response.");
             return null;
         }
 
-        byte[] content3 = rp3.getContent();
+        byte[] content3 = rp3.content();
         ByteBuffer bb = ByteBuffer.wrap(content3);
 
         byte[] encryptedResponseNonce = MySSLUtils.getNextBytes(bb);
@@ -424,12 +424,12 @@ public abstract class ClientCommands {
         byte[] receivedPayload2 = MySSLUtils.receiveData(socket);
         ResponsePackage rp = ResponsePackage.parse(receivedPayload2);
 
-        if (rp.getCode() == CommonValues.ERROR_CODE) {
+        if (rp.code() == CommonValues.ERROR_CODE) {
             System.out.println("Error authenticating service.");
             return false;
         }
 
-        byte[] rChallengeResponseDecrypted = CryptoStuff.symDecrypt(ClientTokens.arm.clientService_key, rp.getContent());
+        byte[] rChallengeResponseDecrypted = CryptoStuff.symDecrypt(ClientTokens.arm.clientService_key, rp.content());
 
         bb = ByteBuffer.wrap(rChallengeResponseDecrypted);
         long rChallengeResponseLong = bb.getLong();

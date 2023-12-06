@@ -21,41 +21,21 @@ public class Client {
                     "                                 \n" +
                     "                                 ";
     private static String uid;
-
-    private static SSLSocketFactory factory;
-    private static SSLSocket socket;
     private static String USERNAME_LOGGED = "";
     private static final String PASSWORD = "cl123456";
 
-    private static void readCommands() {
-        /* *
-         * Instructions to add a new command
-         * 1- Create command enum in Command.java
-         * 2- Add Command enum to both switches (client and server)
-         * 3- Create method in ClientCommands
-         * 4- Create command in MainDispatcher class (not MainDispatcherServer class)
-         * 5- Create command in respective server
-         * 6- Create in this class a method and the postProcessing for that command
-         */
+    private static SSLSocketFactory factory;
+    private static SSLSocket socket;
 
-        // TODO: Add exit and help instructions. Add support for unknown instruction
+    private static void readCommands() {
+        // TODO: Add help instruction. Add support for unknown instruction
         Scanner in = new Scanner(System.in);
 
         masterLoop:
         while (true) {
-            // TODO: Maybe we should only open the socket if the command exists.
-            socket = MySSLUtils.startNewConnectionToServer(factory, CommonValues.MD_HOSTNAME,
-                    CommonValues.MD_PORT_NUMBER);
-
             System.out.print(USERNAME_LOGGED + "Command -> ");
             String cmd = in.nextLine();
-            Command command = null;
-            try{
-                command = Command.valueOf(cmd.split(" ")[0].toUpperCase());
-            } catch (Exception e){
-                command = Command.EXIT;
-            }
-            switch (command) {
+            switch (processCommandFromString(cmd)) {
                 case LOGIN:
                     login(cmd);
                     break;
@@ -82,11 +62,12 @@ public class Client {
                     break;
                 case EXIT:
                     System.out.println("Exiting...");
-                default:
                     break masterLoop;
+                default:
+                    System.out.println("Unknown command. Type \"help\" for a list of available commands.\n");
+                    continue masterLoop;
             }
-            MySSLUtils.closeConnectionToServer(socket);
-            System.out.println();
+            afterConnectionRoutine();
         }
 
     }
@@ -248,6 +229,31 @@ public class Client {
         System.out.println(crm.getResponse());
     }
 
+    // ===== AUX METHODS =====
+    private static Command processCommandFromString(String cmd){
+        try{
+            Command command = Command.valueOf(cmd.trim().split(" ")[0].toUpperCase());
+
+            // Only opens the connection for a command that needs it
+            if(command.needsConnection()){
+                socket = MySSLUtils.startNewConnectionToServer(factory, CommonValues.MD_HOSTNAME,
+                        CommonValues.MD_PORT_NUMBER);
+            }
+
+            return command;
+        } catch (Exception e){
+            return Command.UNKNOWN;
+        }
+    }
+
+    private static void afterConnectionRoutine(){
+        if(socket != null){
+            MySSLUtils.closeConnectionToServer(socket);
+            socket = null;
+        }
+        System.out.println();
+    }
+
     public static void main(String[] args) {
         System.out.println(CLIENT_BOOT_MESSAGE);
 
@@ -256,6 +262,7 @@ public class Client {
             return;
         }
 
+        // catch arguments
         uid = args[0];
 
         // paths

@@ -25,6 +25,8 @@ runClient(){
 compileJava(){
   echo "Compiling project..."
 
+  set -e # Abort script on javac errors
+
   javac -d out ./src/utils/* ./src/client/responseModels/* ./src/client/Client.java ./src/client/ClientCommands.java\
   ./src/client/ClientValidator.java ./src/client/ClientTokens.java
   javac -d out ./src/utils/* ./src/servers/MainDispatcher/*
@@ -32,7 +34,8 @@ compileJava(){
   javac -d out ./src/utils/* ./src/servers/AccessControlServer/*
   javac -d out ./src/utils/* ./src/servers/StorageSystemService/*
 
-  # echo -ne "\033[K"
+  set +e # Disable aborting
+
   echo "Project Compiled."
 }
 

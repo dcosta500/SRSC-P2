@@ -29,9 +29,9 @@ public class ACServer {
     private static SQL users;
 
     private static byte[] executeCommand(Socket socket, DataPackage dp) {
-        switch (dp.getCommand()) {
+        switch (dp.command()) {
             case ACCESS:
-                return AccessControlServer.access(socket, nonceSet, dp.getContent(), users);
+                return AccessControlServer.access(socket, nonceSet, dp.content(), users);
             default:
                 System.out.println("Received unknown command.");
                 return new byte[0];

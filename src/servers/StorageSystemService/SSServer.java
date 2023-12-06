@@ -26,21 +26,21 @@ public class SSServer {
     private static final String DEFAULT_DIR = System.getProperty("user.dir")+"/data";
 
     private static byte[] executeCommand(Socket socket, DataPackage dp) {
-        switch (dp.getCommand()) {
+        switch (dp.command()) {
             case GET:
-                return StorageServiceServer.get(socket,dp.getContent(),nonceSet);
+                return StorageServiceServer.get(socket,dp.content(),nonceSet);
             case PUT:
-                return StorageServiceServer.put(socket,dp.getContent(),nonceSet);
+                return StorageServiceServer.put(socket,dp.content(),nonceSet);
             case LIST:
-                return StorageServiceServer.list(socket,dp.getContent(), nonceSet);
+                return StorageServiceServer.list(socket,dp.content(), nonceSet);
             case REMOVE:
-                return StorageServiceServer.remove(socket,dp.getContent(),nonceSet);
+                return StorageServiceServer.remove(socket,dp.content(),nonceSet);
             case COPY:
-                return StorageServiceServer.copy(socket,dp.getContent(),nonceSet);
+                return StorageServiceServer.copy(socket,dp.content(),nonceSet);
             case MKDIR:
-                return StorageServiceServer.mkdir(socket,dp.getContent(),nonceSet);
+                return StorageServiceServer.mkdir(socket,dp.content(),nonceSet);
             case FILE:
-                return StorageServiceServer.file(socket,dp.getContent(),nonceSet);
+                return StorageServiceServer.file(socket,dp.content(),nonceSet);
             default:
                 return new byte[0];
         }

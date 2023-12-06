@@ -21,9 +21,9 @@ public class ASServer {
     private static SQL users;
 
     private static byte[] executeCommand(Socket socket, DataPackage dp) {
-        switch (dp.getCommand()) {
+        switch (dp.command()) {
             case LOGIN:
-                return AuthenticationServer.login(socket, users, dp.getContent());
+                return AuthenticationServer.login(socket, users, dp.content());
             default:
                 System.out.println("Received unknown command.");
                 return new byte[0];

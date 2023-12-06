@@ -3,37 +3,16 @@ package utils;
 import java.nio.ByteBuffer;
 
 // Package to send
-public class DataPackage {
-
-    private final Command command;
-    private final int length;
-    private final byte[] content;
-
-    public DataPackage(Command command, int length, byte[] content) {
-        this.command = command;
-        this.length = length;
-        this.content = content;
-    }
-
-    public Command getCommand() {
-        return this.command;
-    }
-
-    public int getLength() {
-        return this.length;
-    }
-
-    public byte[] getContent() {
-        return this.content;
-    }
+public record DataPackage(Command command, int length, byte[] content) {
 
     public static DataPackage parse(byte[] data) {
         ByteBuffer bb = ByteBuffer.wrap(data);
 
-        Command command = Command.getCommandFromOrdinal(bb.getInt(0));
-        int length = bb.getInt(Integer.BYTES);
+        Command command = Command.getCommandFromOrdinal(bb.getInt());
+        int length = bb.getInt();
+
         byte[] content = new byte[length];
-        bb.get(2 * Integer.BYTES, content);
+        bb.get(content);
 
         return new DataPackage(command, length, content);
     }
