@@ -2,6 +2,7 @@ package servers.StorageSystemService;
 
 
 import utils.CommonValues;
+import utils.CryptoStuff;
 import utils.DataPackage;
 import utils.MySSLUtils;
 
@@ -10,6 +11,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.security.Key;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
@@ -78,8 +80,14 @@ public class StorageServiceServer {
     }
 
     private static void initDirs(){
+        Key key = CryptoStuff.parseSymKeyFromBase64(System.getProperty("PRIVATE_SYM_KEY"));
+
         for (String user : usernames){
-            String directoryPath = DEFAULT_DIR+"/"+user;
+
+            //Encrypt userName to string using base 64 and key
+            byte[] encryptedUserName = CryptoStuff.symEncrypt(key, user.getBytes());
+            String encryptedUserNameString = CryptoStuff.bytesToB64(encryptedUserName);
+            String directoryPath = DEFAULT_DIR+"/"+encryptedUserNameString;
             // Create a File object representing the directory
             File directory = new File(directoryPath);
             // Check if the directory doesn't exist, then create it
