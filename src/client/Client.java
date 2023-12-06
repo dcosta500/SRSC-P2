@@ -5,9 +5,6 @@ import javax.net.ssl.*;
 import client.responseModels.*;
 import utils.*;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.util.Properties;
 import java.util.Scanner;
 
 public class Client {
@@ -35,7 +32,7 @@ public class Client {
         while (true) {
             System.out.print(USERNAME_LOGGED + "Command -> ");
             String cmd = in.nextLine();
-            switch (processCommandFromString(cmd)) {
+            switch (processCommandAndOpenSocket(cmd)) {
                 case LOGIN:
                     login(cmd);
                     break;
@@ -230,7 +227,7 @@ public class Client {
     }
 
     // ===== AUX METHODS =====
-    private static Command processCommandFromString(String cmd) {
+    private static Command processCommandAndOpenSocket(String cmd) {
         try {
             Command command = Command.valueOf(cmd.trim().split(" ")[0].toUpperCase());
 

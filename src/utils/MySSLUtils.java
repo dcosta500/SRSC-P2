@@ -21,6 +21,7 @@ public abstract class MySSLUtils {
 
 
     // ===== Factories and Connections =====
+
     /**
      * Create a Server Socket Factory
      *
@@ -97,6 +98,48 @@ public abstract class MySSLUtils {
     }
 
     /**
+     * Start new connection to server
+     *
+     * @param factory    the socket factory
+     * @param hostname   the server hostname
+     * @param portNumber the server port
+     * @return the socket
+     */
+    public static SSLSocket startNewConnectionToServer(SSLSocketFactory factory, String hostname, int portNumber) {
+        String curDir = System.getProperty("user.dir");
+
+        Properties tlsProps = new Properties();
+        try (FileInputStream input = new FileInputStream(curDir + "/configs/tlsConfig/client.conf")) {
+            tlsProps.load(input);
+        } catch (Exception e) {
+            System.out.println("Could not load tls server configurations.");
+            return null;
+        }
+
+        String tlsVersion = tlsProps.getProperty("TLS_PROT_ENF");
+        boolean tlsAuth = tlsProps.getProperty("TLS_AUTH").equals("MUTUAL");
+        String[] tlsCiphersuites = tlsProps.getProperty("CIPHERSUITES").split(",");
+
+        try {
+            SSLSocket socket = (SSLSocket) factory.createSocket(hostname, portNumber);
+
+            socket.setReceiveBufferSize(CommonValues.DATA_SIZE);
+            socket.setSendBufferSize(CommonValues.DATA_SIZE);
+
+            socket.setEnabledProtocols(new String[]{tlsVersion});
+            socket.setNeedClientAuth(tlsAuth);
+            socket.setEnabledCipherSuites(tlsCiphersuites);
+
+            socket.startHandshake();
+            return socket;
+        } catch (Exception e) {
+            System.out.println("Unable to start connection.");
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    /**
      * Creates a Server Socket.
      *
      * @param portNumber         the port
@@ -108,9 +151,9 @@ public abstract class MySSLUtils {
         String curDir = System.getProperty("user.dir");
 
         Properties tlsProps = new Properties();
-        try(FileInputStream input = new FileInputStream(curDir + "/configs/tlsConfig/server.conf")){
+        try (FileInputStream input = new FileInputStream(curDir + "/configs/tlsConfig/server.conf")) {
             tlsProps.load(input);
-        } catch (Exception e){
+        } catch (Exception e) {
             System.out.println("Could not load tls server configurations.");
             return null;
         }
@@ -124,38 +167,14 @@ public abstract class MySSLUtils {
             ServerSocket ss = ssf.createServerSocket(portNumber);
 
             ((SSLServerSocket) ss).setEnabledProtocols(new String[]{tlsVersion});
-            ((SSLServerSocket) ss).setEnabledCipherSuites(tlsCiphersuites);
             ((SSLServerSocket) ss).setNeedClientAuth(tlsAuth);
+            ((SSLServerSocket) ss).setEnabledCipherSuites(tlsCiphersuites);
 
             ss.setReceiveBufferSize(CommonValues.DATA_SIZE);
 
             return ss;
         } catch (IOException e) {
             System.out.println("Problem with sockets: unable to start server: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    /**
-     * Start new connection to server
-     *
-     * @param factory    the socket factory
-     * @param hostname   the server hostname
-     * @param portNumber the server port
-     * @return the socket
-     */
-    public static SSLSocket startNewConnectionToServer(SSLSocketFactory factory, String hostname, int portNumber) {
-        try {
-            SSLSocket socket = (SSLSocket) factory.createSocket(hostname, portNumber);
-
-            socket.setReceiveBufferSize(CommonValues.DATA_SIZE);
-            socket.setSendBufferSize(CommonValues.DATA_SIZE);
-
-            socket.startHandshake();
-            return socket;
-        } catch (Exception e) {
-            System.out.println("Unable to start connection.");
             e.printStackTrace();
         }
         return null;
@@ -238,12 +257,12 @@ public abstract class MySSLUtils {
             OutputStream out = socket.getOutputStream();
 
             byte[] aux = null;
-            if(data.length != CommonValues.DATA_SIZE ){
+            if (data.length != CommonValues.DATA_SIZE) {
                 aux = new byte[CommonValues.DATA_SIZE];
                 System.arraycopy(data, 0, aux, 0, Math.min(data.length, aux.length));
             }
 
-            out.write(aux == null? data: aux);
+            out.write(aux == null ? data : aux);
             out.flush();
         } catch (Exception e) {
             System.out.println("Could not send data.");
