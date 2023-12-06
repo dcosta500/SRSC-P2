@@ -299,7 +299,7 @@ public abstract class ClientCommands {
 
             //==== Prepare file to send ====
             Path pathToFile = Paths.get(DEFAULT_PUT_DIR).resolve(uid).resolve(args[2]);
-            byte[] sendFile = null;
+            byte[] sendFile;
             try {
                 sendFile = Files.readAllBytes(pathToFile);
             } catch (Exception e) {

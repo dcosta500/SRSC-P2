@@ -110,6 +110,12 @@ public class Client {
 
     private static void processLoginResponse(LoginResponseModel lrm) {
         if (lrm == null) {
+            // If client had logged in successfully before
+            if(ClientTokens.lrm != null)
+                System.out.println("Authentication revoked. You will need to correctly login again.");
+
+            ClientTokens.lrm = null;
+            USERNAME_LOGGED = "";
             return;
         }
 
@@ -242,19 +248,6 @@ public class Client {
         System.out.println(crm.getResponse());
     }
 
-    private static void processClientConfFile() {
-        String client_conf_path = String.format("configs/clients/%s.conf", uid);
-        Properties props = new Properties();
-        try (FileInputStream input = new FileInputStream(client_conf_path)) {
-            props.load(input);
-        } catch (IOException e) {
-            System.out.println("Could not import client's .conf file.");
-            e.printStackTrace();
-        }
-
-        System.setProperty("PRIVATE_SYM_KEY", props.getProperty("PRIVATE_SYM_KEY"));
-    }
-
     public static void main(String[] args) {
         System.out.println(CLIENT_BOOT_MESSAGE);
 
@@ -271,7 +264,6 @@ public class Client {
 
         // envs
         System.setProperty("javax.net.ssl.trustStore", client_truststore_path);
-        processClientConfFile();
 
         try {
             factory = MySSLUtils.createClientSocketFactory(client_keystore_path, PASSWORD);
