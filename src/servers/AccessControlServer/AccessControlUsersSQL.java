@@ -4,8 +4,8 @@ import utils.MySQLiteUtils;
 import utils.SQL;
 
 
-public class AccessControlSQL extends SQL {
-    public AccessControlSQL(String tableName, String dbFile) {
+public class AccessControlUsersSQL extends SQL {
+    public AccessControlUsersSQL(String tableName, String dbFile) {
         super(tableName, dbFile);
         init();
     }

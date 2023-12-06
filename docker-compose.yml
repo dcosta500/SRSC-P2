@@ -11,32 +11,36 @@ services:
     command: ["java" ,"-cp" ,"out", "servers.MainDispatcher.MainDispatcherServer"]
     volumes:
       - ./certs/mdCrypto:/app/certs/mdCrypto
+      - ./configs/tlsConfig:/app/configs/tlsConfig
   authentication:
     build: .
     image: auth_server:srsc_p2
     ports:
       - "8081:8081"
-    command: ["java" ,"-cp" ,"out:jars/sqlite-jdbc-3.44.0.0.jar:jars/slf4j-api-1.7.36.jar", "servers.AuthenticationServer.ASServer"]
+    command: ["java" ,"-cp" ,"out:jars/sqlite-jdbc-3.44.0.0.jar:jars/slf4j-api-1.7.36.jar", "servers.AuthenticationServer.AuthenticationServer"]
     volumes:
       - ./certs/asCrypto:/app/certs/asCrypto
       - ./src/jars:/app/jars
       - ./configs/auth_server.conf:/app/configs/auth_server.conf
+      - ./configs/tlsConfig/server.conf:/app/configs/tlsConfig/server.conf
   access_control:
     build: .
     image: access_control:srsc_p2
     ports:
       - "8082:8082"
-    command: ["java" ,"-cp" ,"out:jars/sqlite-jdbc-3.44.0.0.jar:jars/slf4j-api-1.7.36.jar", "servers.AccessControlServer.ACServer"]
+    command: ["java" ,"-cp" ,"out:jars/sqlite-jdbc-3.44.0.0.jar:jars/slf4j-api-1.7.36.jar", "servers.AccessControlServer.AccessControlServer"]
     volumes:
       - ./certs/acCrypto:/app/certs/acCrypto
       - ./src/jars:/app/jars
       - ./configs/access_control_server.conf:/app/configs/access_control_server.conf
+      - ./configs/tlsConfig/server.conf:/app/configs/tlsConfig/server.conf
   storage_service:
     build: .
     image: storage_service:srsc_p2
     ports:
       - "8083:8083"
-    command: ["java" ,"-cp" ,"out", "servers.StorageSystemService.SSServer"]
+    command: ["java" ,"-cp" ,"out", "servers.StorageSystemService.StorageServiceServer"]
     volumes:
       - ./certs/ssCrypto:/app/certs/ssCrypto
       - ./configs/storage_server.conf:/app/configs/storage_server.conf
+      - ./configs/tlsConfig/server.conf:/app/configs/tlsConfig/server.conf

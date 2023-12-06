@@ -24,6 +24,7 @@ runClient(){
 
 compileJava(){
   echo "Compiling project..."
+  rm -r out
 
   set -e # Abort script on javac errors
 

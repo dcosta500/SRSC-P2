@@ -92,7 +92,7 @@ public class Client {
     private static void processLoginResponse(LoginResponseModel lrm) {
         if (lrm == null) {
             // If client had logged in successfully before
-            if(ClientTokens.lrm != null)
+            if (ClientTokens.lrm != null)
                 System.out.println("Authentication revoked. You will need to correctly login again.");
 
             ClientTokens.lrm = null;
@@ -120,7 +120,7 @@ public class Client {
         processResponse(crm, "Could not create directory.");
     }
 
-    private static void copy(String cmd){
+    private static void copy(String cmd) {
         if (!ClientValidator.copyValidator(cmd)) {
             System.out.println("Command is not correctly formatted");
             return;
@@ -136,7 +136,7 @@ public class Client {
         processResponse(crm, "Could not copy file.");
     }
 
-    private static void remove(String cmd){
+    private static void remove(String cmd) {
         if (!ClientValidator.putValidator(cmd)) {
             System.out.println("Command is not correctly formatted");
             return;
@@ -152,7 +152,7 @@ public class Client {
         processResponse(crm, "Could not remove file.");
     }
 
-    private static void file(String cmd){
+    private static void file(String cmd) {
         if (!ClientValidator.fileValidator(cmd)) {
             System.out.println("Command is not correctly formatted");
             return;
@@ -211,7 +211,7 @@ public class Client {
             return;
         }
 
-        if(cmd.split(" ").length == 2){ // list home root
+        if (cmd.split(" ").length == 2) { // list home root
             cmd += " /";
         }
 
@@ -220,8 +220,8 @@ public class Client {
         processResponse(crm, "Could not list directory.");
     }
 
-    private static void processResponse(CommandResponseModel crm, String errorMessage){
-        if(crm == null){
+    private static void processResponse(CommandResponseModel crm, String errorMessage) {
+        if (crm == null) {
             System.out.println(errorMessage);
             return;
         }
@@ -230,24 +230,24 @@ public class Client {
     }
 
     // ===== AUX METHODS =====
-    private static Command processCommandFromString(String cmd){
-        try{
+    private static Command processCommandFromString(String cmd) {
+        try {
             Command command = Command.valueOf(cmd.trim().split(" ")[0].toUpperCase());
 
             // Only opens the connection for a command that needs it
-            if(command.needsConnection()){
+            if (command.needsConnection()) {
                 socket = MySSLUtils.startNewConnectionToServer(factory, CommonValues.MD_HOSTNAME,
                         CommonValues.MD_PORT_NUMBER);
             }
 
             return command;
-        } catch (Exception e){
+        } catch (Exception e) {
             return Command.UNKNOWN;
         }
     }
 
-    private static void afterConnectionRoutine(){
-        if(socket != null){
+    private static void afterConnectionRoutine() {
+        if (socket != null) {
             MySSLUtils.closeConnectionToServer(socket);
             socket = null;
         }
@@ -275,7 +275,6 @@ public class Client {
         try {
             factory = MySSLUtils.createClientSocketFactory(client_keystore_path, PASSWORD);
             readCommands();
-            socket.close();
         } catch (Exception e) {
             e.printStackTrace();
         }

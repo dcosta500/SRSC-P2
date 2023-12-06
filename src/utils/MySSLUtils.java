@@ -13,13 +13,14 @@ import java.net.Socket;
 import java.net.SocketOption;
 import java.nio.ByteBuffer;
 import java.security.KeyStore;
+import java.util.Properties;
 
 import javax.net.ServerSocketFactory;
 
 public abstract class MySSLUtils {
+
+
     // ===== Factories and Connections =====
-
-
     /**
      * Create a Server Socket Factory
      *
@@ -96,29 +97,41 @@ public abstract class MySSLUtils {
     }
 
     /**
-     * Creates a Server Socket
+     * Creates a Server Socket.
      *
      * @param portNumber         the port
      * @param serverKeystorePath the keystore path
      * @param password           the keystore password
-     * @param doClientAuth       flag do client auth
      * @return the server socket
      */
-    public static ServerSocket createServerSocket(int portNumber, String serverKeystorePath, String password,
-                                                  boolean doClientAuth) {
+    public static ServerSocket createServerSocket(int portNumber, String serverKeystorePath, String password) {
+        String curDir = System.getProperty("user.dir");
+
+        Properties tlsProps = new Properties();
+        try(FileInputStream input = new FileInputStream(curDir + "/configs/tlsConfig/server.conf")){
+            tlsProps.load(input);
+        } catch (Exception e){
+            System.out.println("Could not load tls server configurations.");
+            return null;
+        }
+
+        String tlsVersion = tlsProps.getProperty("TLS_PROT_ENF");
+        boolean tlsAuth = tlsProps.getProperty("TLS_AUTH").equals("MUTUAL");
+        String[] tlsCiphersuites = tlsProps.getProperty("CIPHERSUITES").split(",");
+
         try {
             ServerSocketFactory ssf = MySSLUtils.createServerSocketFactory(serverKeystorePath, password);
             ServerSocket ss = ssf.createServerSocket(portNumber);
 
-            ((SSLServerSocket) ss).setEnabledProtocols(new String[]{"TLSv1.2"});
-            ((SSLServerSocket) ss).setEnabledCipherSuites(new String[]{"TLS_RSA_WITH_AES_128_GCM_SHA256"});
-            ((SSLServerSocket) ss).setNeedClientAuth(doClientAuth);
+            ((SSLServerSocket) ss).setEnabledProtocols(new String[]{tlsVersion});
+            ((SSLServerSocket) ss).setEnabledCipherSuites(tlsCiphersuites);
+            ((SSLServerSocket) ss).setNeedClientAuth(tlsAuth);
 
             ss.setReceiveBufferSize(CommonValues.DATA_SIZE);
 
             return ss;
         } catch (IOException e) {
-            System.out.println("Problem with sockets: unable to start ClassServer: " + e.getMessage());
+            System.out.println("Problem with sockets: unable to start server: " + e.getMessage());
             e.printStackTrace();
         }
         return null;

@@ -1,14 +1,11 @@
 package servers.AuthenticationServer;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-
 import utils.MySQLiteUtils;
 import utils.SQL;
 
-public class AuthUsersSQL extends SQL {
+public class AuthenticationUsersSQL extends SQL {
 
-    public AuthUsersSQL(String tableName, String dbFile) {
+    public AuthenticationUsersSQL(String tableName, String dbFile) {
         super(tableName,dbFile);
         init();
     }
