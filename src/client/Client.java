@@ -235,11 +235,16 @@ public class Client {
             if (command.needsConnection()) {
                 socket = MySSLUtils.startNewConnectionToServer(factory, CommonValues.MD_HOSTNAME,
                         CommonValues.MD_PORT_NUMBER);
+                if(socket == null)
+                    throw new Exception();
             }
 
             return command;
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
             return Command.UNKNOWN;
+        } catch (Exception e) {
+            // Something unexpected happened
+            return Command.EXIT;
         }
     }
 

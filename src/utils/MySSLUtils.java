@@ -86,8 +86,7 @@ public abstract class MySSLUtils {
             kmf = KeyManagerFactory.getInstance("SunX509");
             kmf.init(ks, password.toCharArray());
 
-            // Create SLL Context (truststore is added through the java run command
-            // thus there is no need to add it here)
+            // Create SLL Context
             ctx = SSLContext.getInstance("TLS");
             ctx.init(kmf.getKeyManagers(), null, null);
         } catch (Exception e) {
@@ -116,19 +115,19 @@ public abstract class MySSLUtils {
             return null;
         }
 
-        String tlsVersion = tlsProps.getProperty("TLS_PROT_ENF");
+        String[] tlsVersion = tlsProps.getProperty("TLS_PROT_ENF").split(",");
         boolean tlsAuth = tlsProps.getProperty("TLS_AUTH").equals("MUTUAL");
         String[] tlsCiphersuites = tlsProps.getProperty("CIPHERSUITES").split(",");
 
         try {
             SSLSocket socket = (SSLSocket) factory.createSocket(hostname, portNumber);
 
-            socket.setReceiveBufferSize(CommonValues.DATA_SIZE);
-            socket.setSendBufferSize(CommonValues.DATA_SIZE);
-
-            socket.setEnabledProtocols(new String[]{tlsVersion});
+            socket.setEnabledProtocols(tlsVersion);
             socket.setNeedClientAuth(tlsAuth);
             socket.setEnabledCipherSuites(tlsCiphersuites);
+
+            socket.setReceiveBufferSize(CommonValues.DATA_SIZE);
+            socket.setSendBufferSize(CommonValues.DATA_SIZE);
 
             socket.startHandshake();
             return socket;
@@ -158,7 +157,7 @@ public abstract class MySSLUtils {
             return null;
         }
 
-        String tlsVersion = tlsProps.getProperty("TLS_PROT_ENF");
+        String[] tlsVersion = tlsProps.getProperty("TLS_PROT_ENF").split(",");
         boolean tlsAuth = tlsProps.getProperty("TLS_AUTH").equals("MUTUAL");
         String[] tlsCiphersuites = tlsProps.getProperty("CIPHERSUITES").split(",");
 
@@ -166,7 +165,7 @@ public abstract class MySSLUtils {
             ServerSocketFactory ssf = MySSLUtils.createServerSocketFactory(serverKeystorePath, password);
             ServerSocket ss = ssf.createServerSocket(portNumber);
 
-            ((SSLServerSocket) ss).setEnabledProtocols(new String[]{tlsVersion});
+            ((SSLServerSocket) ss).setEnabledProtocols(tlsVersion);
             ((SSLServerSocket) ss).setNeedClientAuth(tlsAuth);
             ((SSLServerSocket) ss).setEnabledCipherSuites(tlsCiphersuites);
 
