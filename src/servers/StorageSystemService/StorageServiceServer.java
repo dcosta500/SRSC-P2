@@ -53,9 +53,9 @@ public class StorageServiceServer {
         Path directory;
         try{
             if (path.isEmpty()) {
-                directory = Paths.get(DEFAULT_DIR + "/" + username);
+                directory = Paths.get(DEFAULT_DIR + "/" + userPath);
             } else {
-                directory = Paths.get(DEFAULT_DIR + "/" + username + "/" + path + "/");
+                directory = Paths.get(DEFAULT_DIR + "/" + userPath + "/" + path + "/");
             }
         } catch (Exception e){
             System.out.println("Provided path is not valid.");
