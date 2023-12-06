@@ -49,31 +49,8 @@ public class StorageServiceCommands {
         String path = new String(MySSLUtils.getNextBytes(bb), StandardCharsets.UTF_8);
 
         Key key = CryptoStuff.parseSymKeyFromBase64(System.getProperty("PRIVATE_SYM_KEY"));
-
-        byte[] userPathEncrypted = CryptoStuff.symEncrypt(key, userPath.getBytes());
-        String userPathEncryptedString = CryptoStuff.bytesToB64(userPathEncrypted);
-
-        String[] pathSplit = path.split("/");
-        String pathEncrypted = "";
-        for (String s : pathSplit) {
-            byte[] pathEncryptedBytes = CryptoStuff.symEncrypt(key, s.getBytes());
-            pathEncrypted = pathEncrypted.concat(CryptoStuff.bytesToB64(pathEncryptedBytes)+   "/");
-
-        }
-
         long nonce2 = bb.getLong();
-
-        Path directory;
-        try{
-            if (path.isEmpty()) {
-                directory = Paths.get(DEFAULT_DIR + "/" + userPathEncryptedString);
-            } else {
-                directory = Paths.get(DEFAULT_DIR + "/" + userPathEncryptedString + "/" + pathEncrypted);
-            }
-        } catch (Exception e){
-            System.out.println("Provided path is not valid.");
-            return MySSLUtils.buildErrorResponse();
-        }
+        Path directory = getDir(userPath,path);
 
         byte[] response;
         try {
@@ -142,28 +119,13 @@ public class StorageServiceCommands {
         bb = ByteBuffer.wrap(arguments);
         String userPath = new String(MySSLUtils.getNextBytes(bb));
         String path = new String(MySSLUtils.getNextBytes(bb));
-
-        Key key = CryptoStuff.parseSymKeyFromBase64(System.getProperty("PRIVATE_SYM_KEY"));
-
-        byte[] userPathEncrypted = CryptoStuff.symEncrypt(key, userPath.getBytes());
-        String userPathEncryptedString = CryptoStuff.bytesToB64(userPathEncrypted);
-
-        String[] pathSplit = path.split("/");
-        String pathEncrypted = "";
-        for (String s : pathSplit) {
-            byte[] pathEncryptedBytes = CryptoStuff.symEncrypt(key, s.getBytes());
-            pathEncrypted = pathEncrypted.concat(CryptoStuff.bytesToB64(pathEncryptedBytes)+   "/");
-
-        }
-        pathEncrypted = pathEncrypted.substring(0, pathEncrypted.length() - 1);
-        String directoryPath = DEFAULT_DIR + "/" + userPathEncryptedString + "/" + pathEncrypted;
         long nonce = bb.getLong();
         byte[] fileContent = MySSLUtils.getNextBytes(bb);
 
 
         // Command Logic
 
-        Path directory = Paths.get(directoryPath);
+        Path directory = getDir(userPath,path);
 
         Key clientServiceKey = CryptoStuff.parseSymKeyFromBytes(clientServiceKeyBytes);
 
@@ -228,25 +190,11 @@ public class StorageServiceCommands {
         bb = ByteBuffer.wrap(arguments);
         String userPath = new String(MySSLUtils.getNextBytes(bb));
         String path = new String(MySSLUtils.getNextBytes(bb));
-        Key key = CryptoStuff.parseSymKeyFromBase64(System.getProperty("PRIVATE_SYM_KEY"));
-
-        byte[] userPathEncrypted = CryptoStuff.symEncrypt(key, userPath.getBytes());
-        String userPathEncryptedString = CryptoStuff.bytesToB64(userPathEncrypted);
-
-        String[] pathSplit = path.split("/");
-        String pathEncrypted = "";
-        for (String s : pathSplit) {
-            byte[] pathEncryptedBytes = CryptoStuff.symEncrypt(key, s.getBytes());
-            pathEncrypted = pathEncrypted.concat(CryptoStuff.bytesToB64(pathEncryptedBytes)+   "/");
-
-        }
-        pathEncrypted = pathEncrypted.substring(0, pathEncrypted.length() - 1);
-        String directoryPath = DEFAULT_DIR + "/" + userPathEncryptedString + "/" + pathEncrypted;
         long nonce2 = bb.getLong();
 
         Key clientServiceKey = CryptoStuff.parseSymKeyFromBytes(clientServiceKeyBytes);
 
-        Path file = Paths.get(directoryPath);
+        Path file = getDir(userPath,path);
         if (!Files.exists(file)) {
             System.err.println("File does not exist");
             return MySSLUtils.buildErrorResponse();
@@ -264,7 +212,6 @@ public class StorageServiceCommands {
             System.out.println("username: " + username);
             System.out.println("userPath: " + userPath);
             System.out.println("path: " + path);
-            System.out.println("Directory path: " + directoryPath);
             return MySSLUtils.buildErrorResponse();
         }
         byte[] response = fileRead.getContent();
@@ -304,30 +251,7 @@ public class StorageServiceCommands {
         String userPath = new String(MySSLUtils.getNextBytes(bb));
         String path = new String(MySSLUtils.getNextBytes(bb));
         String newPath = new String(MySSLUtils.getNextBytes(bb));
-        Key key = CryptoStuff.parseSymKeyFromBase64(System.getProperty("PRIVATE_SYM_KEY"));
 
-        byte[] userPathEncrypted = CryptoStuff.symEncrypt(key, userPath.getBytes());
-        String userPathEncryptedString = CryptoStuff.bytesToB64(userPathEncrypted);
-
-        String[] pathSplit = path.split("/");
-        String pathEncrypted = "";
-        for (String s : pathSplit) {
-            byte[] pathEncryptedBytes = CryptoStuff.symEncrypt(key, s.getBytes());
-            pathEncrypted = pathEncrypted.concat(CryptoStuff.bytesToB64(pathEncryptedBytes)+   "/");
-
-        }
-        pathEncrypted = pathEncrypted.substring(0, pathEncrypted.length() - 1);
-        String directoryPath = DEFAULT_DIR + "/" + userPathEncryptedString + "/" + pathEncrypted;
-
-        pathSplit = newPath.split("/");
-        String newPathEncrypted = "";
-        for (String s : pathSplit) {
-            byte[] pathEncryptedBytes = CryptoStuff.symEncrypt(key, s.getBytes());
-            newPathEncrypted = newPathEncrypted.concat(CryptoStuff.bytesToB64(pathEncryptedBytes)+   "/");
-
-        }
-        newPathEncrypted = newPathEncrypted.substring(0, newPathEncrypted.length() - 1);
-        String directoryPath2 = DEFAULT_DIR + "/" + userPathEncryptedString + "/" + newPathEncrypted;
 
         long nonce2 = bb.getLong();
         System.out.println("Copy nonce: " + nonce2);
@@ -335,8 +259,8 @@ public class StorageServiceCommands {
         Key clientServiceKey = CryptoStuff.parseSymKeyFromBytes(clientServiceKeyBytes);
 
 
-        Path file = Paths.get(directoryPath);
-        Path file2 = Paths.get(directoryPath2);
+        Path file = getDir(userPath,path);
+        Path file2 = getDir(userPath,newPath);
         if (!Files.exists(file)) {
             System.err.println("File does not exist");
             return MySSLUtils.buildErrorResponse();
@@ -355,7 +279,6 @@ public class StorageServiceCommands {
             System.out.println("username: " + username);
             System.out.println("userPath: " + userPath);
             System.out.println("path: " + path);
-            System.out.println("Directory path: " + directoryPath);
 
             return MySSLUtils.buildErrorResponse();
         }
@@ -392,24 +315,10 @@ public class StorageServiceCommands {
         bb = ByteBuffer.wrap(arguments);
         String userPath = new String(MySSLUtils.getNextBytes(bb));
         String path = new String(MySSLUtils.getNextBytes(bb));
-        Key key = CryptoStuff.parseSymKeyFromBase64(System.getProperty("PRIVATE_SYM_KEY"));
-
-        byte[] userPathEncrypted = CryptoStuff.symEncrypt(key, userPath.getBytes());
-        String userPathEncryptedString = CryptoStuff.bytesToB64(userPathEncrypted);
-
-        String[] pathSplit = path.split("/");
-        String pathEncrypted = "";
-        for (String s : pathSplit) {
-            byte[] pathEncryptedBytes = CryptoStuff.symEncrypt(key, s.getBytes());
-            pathEncrypted = pathEncrypted.concat(CryptoStuff.bytesToB64(pathEncryptedBytes)+   "/");
-
-        }
-        pathEncrypted = pathEncrypted.substring(0, pathEncrypted.length() - 1);
-        String directoryPath = DEFAULT_DIR + "/" + userPathEncryptedString + "/" + pathEncrypted;
         long nonce2 = bb.getLong();
 
 
-        Path filePath = Paths.get(directoryPath);
+        Path filePath = getDir(userPath,path);
         try {
             Files.delete(filePath);
         } catch (NoSuchFileException e) {
@@ -473,31 +382,20 @@ public class StorageServiceCommands {
         bb = ByteBuffer.wrap(arguments);
         String userPath = new String(MySSLUtils.getNextBytes(bb)); // username in the command
         String path = new String(MySSLUtils.getNextBytes(bb)); // path in the command
-        Key key = CryptoStuff.parseSymKeyFromBase64(System.getProperty("PRIVATE_SYM_KEY"));
 
-        byte[] userPathEncrypted = CryptoStuff.symEncrypt(key, userPath.getBytes());
-        String userPathEncryptedString = CryptoStuff.bytesToB64(userPathEncrypted);
-
-        String[] pathSplit = path.split("/");
-        String pathEncrypted = "";
-        for (String s : pathSplit) {
-            byte[] pathEncryptedBytes = CryptoStuff.symEncrypt(key, s.getBytes());
-            pathEncrypted = pathEncrypted.concat(CryptoStuff.bytesToB64(pathEncryptedBytes)+   "/");
-
-        }
         long nonce = bb.getLong();
 
         // Command Logic
 
         // Folders are premade for the users and no additional folders can be created.
-        String rootDir = DEFAULT_DIR + "/" + userPathEncryptedString;
-        if(!Files.exists(Paths.get(rootDir))){
+        Path file = getDir(userPath,path);
+        if(!Files.exists(file.getParent())){
             System.out.println("Root dir does not exist.");
             return MySSLUtils.buildErrorResponse();
         }
 
-        String directoryPath =  rootDir + "/" + pathEncrypted;
-        Path directory = Paths.get(directoryPath);
+
+        Path directory = getDir(userPath,path);
 
         if(Files.exists(directory)){
             System.out.println("Directory already exists.");
@@ -547,26 +445,13 @@ public class StorageServiceCommands {
         bb = ByteBuffer.wrap(arguments);
         String userPath = new String(MySSLUtils.getNextBytes(bb));
         String path = new String(MySSLUtils.getNextBytes(bb));
-        Key key = CryptoStuff.parseSymKeyFromBase64(System.getProperty("PRIVATE_SYM_KEY"));
 
-        byte[] userPathEncrypted = CryptoStuff.symEncrypt(key, userPath.getBytes());
-        String userPathEncryptedString = CryptoStuff.bytesToB64(userPathEncrypted);
-
-        String[] pathSplit = path.split("/");
-        String pathEncrypted = "";
-        for (String s : pathSplit) {
-            byte[] pathEncryptedBytes = CryptoStuff.symEncrypt(key, s.getBytes());
-            pathEncrypted = pathEncrypted.concat(CryptoStuff.bytesToB64(pathEncryptedBytes)+   "/");
-
-        }
-        pathEncrypted = pathEncrypted.substring(0, pathEncrypted.length() - 1);
-        String directoryPath = DEFAULT_DIR + "/" + userPathEncryptedString + "/" + pathEncrypted;
         long nonce2 = bb.getLong();
 
         Key clientServiceKey = CryptoStuff.parseSymKeyFromBytes(clientServiceKeyBytes);
 
         // Command Logic
-        Path file = Paths.get(directoryPath);
+        Path file = getDir(userPath,path);
         if (!Files.exists(file)) {
             System.err.println("File does not exist");
             return MySSLUtils.buildErrorResponse();
@@ -753,5 +638,26 @@ public class StorageServiceCommands {
                 return false;
         }
         return true;
+    }
+
+
+    private static Path getDir(String userPath,String path){
+        Key key = CryptoStuff.parseSymKeyFromBase64(System.getProperty("PRIVATE_SYM_KEY"));
+        byte[] userPathEncrypted = CryptoStuff.symEncrypt(key, userPath.getBytes());
+        String userPathEncryptedString = CryptoStuff.bytesToB64(userPathEncrypted);
+        String pathEncrypted = "";
+        String[] pathSplit = path.split("/");
+        System.out.println(path);
+        if(!path.equals("/")){
+            for (String s : pathSplit) {
+                byte[] pathEncryptedBytes = CryptoStuff.symEncrypt(key, s.getBytes());
+                pathEncrypted = pathEncrypted.concat(CryptoStuff.bytesToB64(pathEncryptedBytes)+   "/");
+
+            }
+            pathEncrypted = pathEncrypted.substring(0, pathEncrypted.length() - 1);
+        }
+
+        String directoryPath = DEFAULT_DIR + "/" + userPathEncryptedString + "/" + pathEncrypted;
+        return Paths.get(directoryPath);
     }
 }
