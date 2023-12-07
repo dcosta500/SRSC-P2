@@ -194,7 +194,6 @@ public abstract class MySSLUtils {
     }
 
     // ===== Data Methods =====
-
     /**
      * Build package from command and content
      *

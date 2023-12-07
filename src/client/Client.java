@@ -9,14 +9,16 @@ import java.util.Scanner;
 
 public class Client {
     private static final String CLIENT_BOOT_MESSAGE =
-            "   _____  _  _               _   \n" +
-                    "  / ____|| |(_)             | |  \n" +
-                    " | |     | | _   ___  _ __  | |_ \n" +
-                    " | |     | || | / _ \\| '_ \\ | __|\n" +
-                    " | |____ | || ||  __/| | | || |_ \n" +
-                    "  \\_____||_||_| \\___||_| |_| \\__|\n" +
-                    "                                 \n" +
-                    "                                 ";
+            """
+                       _____  _  _               _  \s
+                      / ____|| |(_)             | | \s
+                     | |     | | _   ___  _ __  | |_\s
+                     | |     | || | / _ \\| '_ \\ | __|
+                     | |____ | || ||  __/| | | || |_\s
+                      \\_____||_||_| \\___||_| |_| \\__|
+                                                    \s
+                                                     \
+                    """;
     private static String uid;
     private static String USERNAME_LOGGED = "";
     private static final String PASSWORD = "cl123456";
