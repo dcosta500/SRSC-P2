@@ -1,3 +1,3 @@
 #!/bin/bash
 
-java -cp out client.Client $1
+java -cp target/srsc-p2-mvn-1.0.jar srsc.client.Client $1

@@ -1,7 +1,7 @@
 FROM amazoncorretto:17.0.7-alpine
 
 WORKDIR /app
-COPY out /app/out
+COPY target /app/target
 
 # This line subtitutes the original java.security of our jdk for our own custom java.security.
 # The only difference from the original is that it removes TLSv1.1 from the disabled algorithms

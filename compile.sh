@@ -24,16 +24,18 @@ runClient(){
 
 compileJava(){
   echo "Compiling project..."
-  rm -r out
+  rm -r target
 
   set -e # Abort script on javac errors
 
-  javac -d out ./src/utils/* ./src/client/responseModels/* ./src/client/Client.java ./src/client/ClientCommands.java\
-  ./src/client/ClientValidator.java ./src/client/ClientTokens.java
-  javac -d out ./src/utils/* ./src/servers/MainDispatcher/*
-  javac -d out ./src/utils/* ./src/servers/AuthenticationServer/*
-  javac -d out ./src/utils/* ./src/servers/AccessControlServer/*
-  javac -d out ./src/utils/* ./src/servers/StorageSystemService/*
+  mvn package
+
+  #javac -d out ./src/utils/* ./src/client/responseModels/* ./src/client/Client.java ./src/client/ClientCommands.java\
+  #./src/client/ClientValidator.java ./src/client/ClientTokens.java
+  #javac -d out ./src/utils/* ./src/servers/MainDispatcher/*
+  #javac -d out ./src/utils/* ./src/servers/AuthenticationServer/*
+  #javac -d out ./src/utils/* ./src/servers/AccessControlServer/*
+  #javac -d out ./src/utils/* ./src/servers/StorageSystemService/*
 
   set +e # Disable aborting
 
