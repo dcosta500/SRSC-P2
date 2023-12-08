@@ -6,8 +6,10 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="srsc-p2-mvn" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="srsc-p2-mvn" target="17" />
+    </bytecodeTargetLevel>
   </component>
 </project>
