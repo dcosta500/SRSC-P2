@@ -14,6 +14,7 @@ import java.security.PrivateKey;
 import java.sql.ResultSet;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Base64;
 
 public abstract class AuthenticationCommands {
 
@@ -52,7 +53,11 @@ public abstract class AuthenticationCommands {
             if (!rs.next())
                 return MySSLUtils.buildErrorResponse();
 
-            hPwd = rs.getString("hPwd");
+            Key key = CryptoStuff.parseSymKeyFromBase64(System.getProperty("PRIV_SYM_KEY"));
+
+            byte[] hPwdEncrypted = Base64.getDecoder().decode(rs.getString("hPwd"));
+            hPwd = new String(CryptoStuff.symDecrypt(key, hPwdEncrypted), StandardCharsets.UTF_8);
+
             boolean canBeAuthenticated = rs.getBoolean("canBeAuthenticated");
             if (!canBeAuthenticated)
                 return MySSLUtils.buildErrorResponse();
