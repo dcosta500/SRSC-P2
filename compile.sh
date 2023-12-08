@@ -23,7 +23,6 @@ runClient(){
 }
 
 compileJava(){
-  echo "Compiling project..."
   rm -r target
 
   set -e # Abort script on javac errors
@@ -38,8 +37,6 @@ compileJava(){
   #javac -d out ./src/utils/* ./src/servers/StorageSystemService/*
 
   set +e # Disable aborting
-
-  echo "Project Compiled."
 }
 
 removeDockerImage(){

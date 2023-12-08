@@ -15,7 +15,7 @@ import java.sql.ResultSet;
 import java.time.Duration;
 import java.time.Instant;
 
-public class AuthenticationCommands {
+public abstract class AuthenticationCommands {
 
     public static byte[] login(Socket mdSocket, SQL users, byte[] content) {
         /* 

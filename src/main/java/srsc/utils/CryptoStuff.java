@@ -16,6 +16,9 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.Random;
 
+import de.mkammerer.argon2.Argon2;
+import de.mkammerer.argon2.Argon2Factory;
+
 public abstract class CryptoStuff {
     // ===== Current settings =====
     private static final String SYMMETRIC_ENCRYPTION_CIPHERSUITE = "AES/CTR/NoPadding";
@@ -247,15 +250,14 @@ public abstract class CryptoStuff {
     }
 
     // ===== Password Based Encryption =====
-
-    public static byte[] pbeHashing(String password){
+    public static String pbeHashing(String password){
         return pbeHashing(password.getBytes());
     }
 
-    public static byte[] pbeHashing(byte[] password){
+    public static String pbeHashing(byte[] password){
         try{
-
-
+            Argon2 argon2 = Argon2Factory.create();
+            return argon2.hash(10, 65536, 1, password);
         } catch (Exception e){
             System.out.println("Could not produce password hash.");
             e.printStackTrace();
