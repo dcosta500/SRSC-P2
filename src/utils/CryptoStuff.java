@@ -258,6 +258,24 @@ public abstract class CryptoStuff {
 
     // ===== Password Based Encryption =====
 
+    public static byte[] pbeHashing(String password){
+        return pbeHashing(password.getBytes());
+    }
+
+    public static byte[] pbeHashing(byte[] password){
+        try{
+            Class.forName("de.mkammerer.argon2.Argon2");
+            Class.forName("de.mkammerer.argon2.Argon2Factory");
+
+            Argon2
+
+        } catch (Exception e){
+            System.out.println("Could not produce password hash.");
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     /**
      * @param password the password
      * @return the key generated from password
