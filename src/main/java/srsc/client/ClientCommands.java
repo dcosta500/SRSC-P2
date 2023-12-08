@@ -75,7 +75,12 @@ public abstract class ClientCommands {
 
         byte[] pubKeyClientBytes_R1 = kp.getPublic().getEncoded();
 
-        String hash = CryptoStuff.hashB64(pwd);
+        String hash = CryptoStuff.pbeHashing(pwd);
+        if(hash == null){
+            System.out.println("Could not hash password.");
+            return null;
+        }
+
         Key pbeKey_R1 = CryptoStuff.pbeCreateKeyFromPassword(hash);
         byte[] srEncryptedBytes_R1 = CryptoStuff.pbeEncrypt(pbeKey_R1, srBytes_r1);
 

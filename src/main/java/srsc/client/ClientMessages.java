@@ -14,7 +14,7 @@ public abstract class ClientMessages {
                     """;
 
     // Command, Parameters, Description
-    private static final String COMMAND_TEMPLATE = "%s %s %s";
+    private static final String COMMAND_TEMPLATE = "%s : %s - %s\n\n";
 
     public static final String LOGIN_FORMAT_MESSAGE = String.format(COMMAND_TEMPLATE, "login", "[username] [password]", "[username] login into the system.");
 

@@ -1,6 +1,2 @@
-/certs/acCrypto/
-/certs/asCrypto/
-/certs/clients/
-/certs/mdCrypto/
-/certs/ssCrypto/
-/target/
+/certs/*
+/target/*
