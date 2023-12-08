@@ -8,17 +8,7 @@ import utils.*;
 import java.util.Scanner;
 
 public class Client {
-    private static final String CLIENT_BOOT_MESSAGE =
-            """
-                       _____  _  _               _  \s
-                      / ____|| |(_)             | | \s
-                     | |     | | _   ___  _ __  | |_\s
-                     | |     | || | / _ \\| '_ \\ | __|
-                     | |____ | || ||  __/| | | || |_\s
-                      \\_____||_||_| \\___||_| |_| \\__|
-                                                    \s
-                                                     \
-                    """;
+
     private static String uid;
     private static String USERNAME_LOGGED = "";
     private static final String PASSWORD = "cl123456";
@@ -62,6 +52,8 @@ public class Client {
                 case EXIT:
                     System.out.println("Exiting...");
                     break masterLoop;
+                case HELP:
+                    System.out.println("TODO: HELP MESSAGE");
                 default:
                     System.out.println("Unknown command. Type \"help\" for a list of available commands.\n");
                     continue masterLoop;
@@ -132,6 +124,7 @@ public class Client {
 
         CommandResponseModel crm = ClientCommands.copy(socket, ClientTokens.lrm.ktoken1024, ClientTokens.lrm.clientAc_SymKey,
                 uid, cmd);
+
         processResponse(crm, "Could not copy file.");
     }
 
@@ -259,7 +252,7 @@ public class Client {
     }
 
     public static void main(String[] args) {
-        System.out.println(CLIENT_BOOT_MESSAGE);
+        System.out.println(ClientMessages.CLIENT_BOOT_MESSAGE);
 
         if (args.length < 1) {
             System.out.println("Provide a client name.");
