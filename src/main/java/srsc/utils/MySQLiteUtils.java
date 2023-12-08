@@ -12,6 +12,7 @@ public abstract class MySQLiteUtils {
      */
     public static Connection resetFile(String filename) {
         try {
+            Class.forName("org.sqlite.JDBC");
             // If it is empty, return connection.
             // If it is not empty,
             String curDir = System.getProperty("user.dir");
@@ -43,6 +44,7 @@ public abstract class MySQLiteUtils {
      */
     public static void createTable(Connection conn, String tableName, String columns) {
         try {
+            Class.forName("org.sqlite.JDBC");
             Statement statement = conn.createStatement();
             statement.execute(String.format("CREATE TABLE %s (%s)", tableName, columns));
             statement.close();
@@ -62,6 +64,7 @@ public abstract class MySQLiteUtils {
      */
     public static ResultSet select(Connection conn, String tableName, String columns, String condition) {
         try {
+            Class.forName("org.sqlite.JDBC");
             String query = String.format("SELECT %s FROM %s WHERE %s", columns, tableName, condition);
             PreparedStatement ps = conn.prepareStatement(query);
             return ps.executeQuery();
@@ -81,6 +84,7 @@ public abstract class MySQLiteUtils {
      */
     public static void insert(Connection conn, String tableName, String columns, String values) {
         try {
+            Class.forName("org.sqlite.JDBC");
             Statement statement = conn.createStatement();
             statement.execute(String.format("INSERT INTO %s (%s) VALUES (%s)", tableName, columns, values));
         } catch (Exception e) {
@@ -98,6 +102,7 @@ public abstract class MySQLiteUtils {
      */
     public static void update(Connection conn, String tableName, String values, String condition) {
         try {
+            Class.forName("org.sqlite.JDBC");
             Statement statement = conn.createStatement();
             statement.execute(
                     String.format("UPDATE %s SET VALUES (%s) WHERE %s", tableName, values, condition));
@@ -116,6 +121,7 @@ public abstract class MySQLiteUtils {
      */
     public static void delete(Connection conn, String tableName, String condition) {
         try {
+            Class.forName("org.sqlite.JDBC");
             Statement statement = conn.createStatement();
             statement.execute(String.format("DELETE FROM %s WHERE %s", tableName, condition));
             statement.close();
@@ -132,6 +138,7 @@ public abstract class MySQLiteUtils {
      */
     public static void deleteAll(Connection conn, String tableName) {
         try {
+            Class.forName("org.sqlite.JDBC");
             Statement statement = conn.createStatement();
             statement.execute(String.format("DELETE FROM %s", tableName));
             statement.close();
