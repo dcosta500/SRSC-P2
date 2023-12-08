@@ -28,7 +28,7 @@ compileJava(){
 
   set -e # Abort script on javac errors
 
-  mvn package
+  mvn clean install
 
   #javac -d out ./src/utils/* ./src/client/responseModels/* ./src/client/Client.java ./src/client/ClientCommands.java\
   #./src/client/ClientValidator.java ./src/client/ClientTokens.java
