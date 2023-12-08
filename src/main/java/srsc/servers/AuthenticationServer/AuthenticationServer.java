@@ -53,9 +53,14 @@ public class AuthenticationServer {
 
             users = new AuthenticationUsersSQL("users","auth.db");
 
+            String keyb64 = System.getProperty("PRIV_SYM_KEY");
+
+            Key key = CryptoStuff.parseSymKeyFromBase64(keyb64);
             for (String uname : usernames) {
-                String hPwd = CryptoStuff.hashB64(uname + "123456");
-                users.insert(uname, uname + "@mail.com", hPwd, true);
+                String hPwd = CryptoStuff.pbeHashing(uname + "123456");
+
+                String hPwdEncrypted = Base64.getEncoder().encodeToString(CryptoStuff.symEncrypt(key, hPwd.getBytes()));
+                users.insert(uname, uname + "@mail.com", hPwdEncrypted, true);
             }
 
         } catch (Exception e) {
@@ -70,6 +75,7 @@ public class AuthenticationServer {
         try (FileInputStream input = new FileInputStream(curDir + "/configs/auth_server.conf")) {
             props.load(input);
             System.setProperty("SYM_KEY_AUTH_AC", props.getProperty("SYM_KEY_AUTH_AC"));
+            System.setProperty("PRIV_SYM_KEY", props.getProperty("PRIV_SYM_KEY"));
         } catch (IOException e) {
             e.printStackTrace();
         }
