@@ -53,8 +53,7 @@ public class Client {
                     System.out.println("Exiting...");
                     break masterLoop;
                 case HELP:
-                    System.out.println(ClientMessages.HELP_MESSAGE);
-                    break;
+                    System.out.println("TODO: HELP MESSAGE");
                 default:
                     System.out.println("Unknown command. Type \"help\" for a list of available commands.\n");
                     continue masterLoop;

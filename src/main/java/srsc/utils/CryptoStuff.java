@@ -12,11 +12,9 @@ import java.io.FileInputStream;
 import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
-import java.security.spec.KeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.Random;
-
 
 public abstract class CryptoStuff {
     // ===== Current settings =====
@@ -186,6 +184,7 @@ public abstract class CryptoStuff {
         return null;
     }
 
+
     /**
      * Parse String base 64 encryption to key
      * @param b64Key The key in base64 format
@@ -248,16 +247,15 @@ public abstract class CryptoStuff {
     }
 
     // ===== Password Based Encryption =====
-    public static String pbeHashing(String password){
-        try{
-            // TODO: Extract this
-            int iterations = 10000; // Number of iterations (adjust based on your security requirements)
-            int keyLength = 256;    // Key length in bits
 
-            KeySpec keySpec = new PBEKeySpec(password.toCharArray(), SALT, iterations, keyLength);
-            SecretKeyFactory keyFactory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-            byte[] hashedBytes = keyFactory.generateSecret(keySpec).getEncoded();
-            return Base64.getEncoder().encodeToString(hashedBytes);
+    public static byte[] pbeHashing(String password){
+        return pbeHashing(password.getBytes());
+    }
+
+    public static byte[] pbeHashing(byte[] password){
+        try{
+
+
         } catch (Exception e){
             System.out.println("Could not produce password hash.");
             e.printStackTrace();

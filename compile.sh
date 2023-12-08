@@ -23,11 +23,12 @@ runClient(){
 }
 
 compileJava(){
+  echo "Compiling project..."
   rm -r target
 
   set -e # Abort script on javac errors
 
-  mvn clean install
+  mvn package
 
   #javac -d out ./src/utils/* ./src/client/responseModels/* ./src/client/Client.java ./src/client/ClientCommands.java\
   #./src/client/ClientValidator.java ./src/client/ClientTokens.java
@@ -37,6 +38,8 @@ compileJava(){
   #javac -d out ./src/utils/* ./src/servers/StorageSystemService/*
 
   set +e # Disable aborting
+
+  echo "Project Compiled."
 }
 
 removeDockerImage(){

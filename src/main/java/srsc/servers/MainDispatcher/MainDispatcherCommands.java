@@ -9,7 +9,7 @@ import javax.net.ssl.SSLSocketFactory;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 
-public abstract class MainDispatcherCommands {
+public class MainDispatcherCommands {
 
     public static byte[] login(Socket clientSocket, byte[] content) {
         /**
