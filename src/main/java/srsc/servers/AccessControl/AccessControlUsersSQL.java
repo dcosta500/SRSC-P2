@@ -1,4 +1,4 @@
-package srsc.servers.AccessControlServer;
+package srsc.servers.AccessControl;
 
 import srsc.utils.MySQLiteUtils;
 import srsc.utils.SQL;

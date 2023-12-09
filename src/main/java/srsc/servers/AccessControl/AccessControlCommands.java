@@ -1,4 +1,4 @@
-package srsc.servers.AccessControlServer;
+package srsc.servers.AccessControl;
 
 import srsc.utils.CommonValues;
 import srsc.utils.CryptoStuff;
@@ -16,7 +16,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Set;
 
-public class AccessControlCommands {
+public abstract class AccessControlCommands {
 
     private static String idClient_token;
 

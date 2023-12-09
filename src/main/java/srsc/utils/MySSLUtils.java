@@ -108,14 +108,12 @@ public abstract class MySSLUtils {
         }
 
         String[] tlsVersion = tlsProps.getProperty("TLS_PROT_ENF").split(",");
-        boolean tlsAuth = tlsProps.getProperty("TLS_AUTH").equals("MUTUAL");
         String[] tlsCiphersuites = tlsProps.getProperty("CIPHERSUITES").split(",");
 
         try {
             SSLSocket socket = (SSLSocket) factory.createSocket(hostname, portNumber);
 
             socket.setEnabledProtocols(tlsVersion);
-            socket.setNeedClientAuth(tlsAuth);
             socket.setEnabledCipherSuites(tlsCiphersuites);
 
             socket.setReceiveBufferSize(CommonValues.DATA_SIZE);

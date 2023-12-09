@@ -1,4 +1,4 @@
-package srsc.servers.StorageSystemService;
+package srsc.servers.StorageService;
 
 
 import srsc.utils.CommonValues;
