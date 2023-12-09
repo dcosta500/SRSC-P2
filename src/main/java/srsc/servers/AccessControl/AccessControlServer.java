@@ -78,11 +78,11 @@ public class AccessControlServer {
             Class.forName("org.sqlite.JDBC");
 
             users = new AccessControlUsersSQL("users", "perms.db");
-            users.insert("alice", CommonValues.SS_ID, CommonValues.PERM_READ_WRITE);
-            users.insert("bob", CommonValues.SS_ID, CommonValues.PERM_READ_WRITE);
-            users.insert("carol", CommonValues.SS_ID, CommonValues.PERM_READ);
-            users.insert("david", CommonValues.SS_ID, CommonValues.PERM_DENY);
-            users.insert("eric", CommonValues.SS_ID, CommonValues.PERM_DENY);
+            users.insert(usernames[0], CommonValues.SS_ID, CommonValues.PERM_READ_WRITE);
+            users.insert(usernames[1], CommonValues.SS_ID, CommonValues.PERM_READ_WRITE);
+            users.insert(usernames[2], CommonValues.SS_ID, CommonValues.PERM_READ);
+            users.insert(usernames[3], CommonValues.SS_ID, CommonValues.PERM_DENY);
+            users.insert(usernames[4], CommonValues.SS_ID, CommonValues.PERM_DENY);
         } catch (Exception e) {
             System.out.println("Error while trying to initialize database.");
             e.printStackTrace();

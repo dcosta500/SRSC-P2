@@ -12,7 +12,6 @@ public abstract class CommonValues {
     public static final String STORAGE_SERVICE_ID = "storage";
 
     // Port values
-    public static final int CLIENT_PORT_NUMBER = 9000;
     public static final int MD_PORT_NUMBER = 8080;
     public static final int AS_PORT_NUMBER = 8081;
     public static final int AC_PORT_NUMBER = 8082;
