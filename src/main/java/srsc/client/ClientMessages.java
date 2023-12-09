@@ -42,7 +42,7 @@ public abstract class ClientMessages {
 
     public static final String HELP_MESSAGE = "Available Commands: \n\n" +
             LOGIN_FORMAT_MESSAGE +
-            LIST_ALL_FORMAT_MESSAGE +
+            LIST_FORMAT_MESSAGE +
             LIST_ALL_FORMAT_MESSAGE +
             MKDIR_FORMAT_MESSAGE +
             PUT_FORMAT_MESSAGE +
