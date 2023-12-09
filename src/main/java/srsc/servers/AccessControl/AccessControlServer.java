@@ -1,4 +1,4 @@
-package srsc.servers.AccessControlServer;
+package srsc.servers.AccessControl;
 
 import srsc.utils.CommonValues;
 import srsc.utils.DataPackage;

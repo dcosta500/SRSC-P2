@@ -1,4 +1,4 @@
-package srsc.servers.StorageSystemService;
+package srsc.servers.StorageService;
 
 import srsc.utils.*;
 
@@ -14,7 +14,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Set;
 
-public class StorageServiceCommands {
+public abstract class StorageServiceCommands {
     private static final String DEFAULT_DIR = System.getProperty("user.dir") + "/data";
     /* *
      * Data flow:

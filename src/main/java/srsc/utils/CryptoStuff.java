@@ -186,7 +186,6 @@ public abstract class CryptoStuff {
         return null;
     }
 
-
     /**
      * Parse String base 64 encryption to key
      * @param b64Key The key in base64 format

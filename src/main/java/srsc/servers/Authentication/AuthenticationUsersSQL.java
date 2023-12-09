@@ -1,4 +1,4 @@
-package srsc.servers.AuthenticationServer;
+package srsc.servers.Authentication;
 
 import srsc.utils.MySQLiteUtils;
 import srsc.utils.SQL;

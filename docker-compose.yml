@@ -17,7 +17,7 @@ services:
     image: auth_server:srsc_p2
     ports:
       - "8081:8081"
-    command: ["java" ,"-cp" ,"target/srsc-p2-mvn-1.0.jar:lib/sqlite-jdbc-3.44.0.0.jar:lib/slf4j-api-1.7.36.jar", "srsc.servers.AuthenticationServer.AuthenticationServer"]
+    command: ["java" ,"-cp" ,"target/srsc-p2-mvn-1.0.jar:lib/sqlite-jdbc-3.44.0.0.jar:lib/slf4j-api-1.7.36.jar", "srsc.servers.Authentication.AuthenticationServer"]
     volumes:
       - ./certs/asCrypto:/app/certs/asCrypto
       - ./configs/auth_server.conf:/app/configs/auth_server.conf
@@ -28,7 +28,7 @@ services:
     image: access_control:srsc_p2
     ports:
       - "8082:8082"
-    command: ["java" ,"-cp" ,"target/srsc-p2-mvn-1.0.jar:lib/sqlite-jdbc-3.44.0.0.jar:lib/slf4j-api-1.7.36.jar", "srsc.servers.AccessControlServer.AccessControlServer"]
+    command: ["java" ,"-cp" ,"target/srsc-p2-mvn-1.0.jar:lib/sqlite-jdbc-3.44.0.0.jar:lib/slf4j-api-1.7.36.jar", "srsc.servers.AccessControl.AccessControlServer"]
     volumes:
       - ./certs/acCrypto:/app/certs/acCrypto
       - ./configs/access_control_server.conf:/app/configs/access_control_server.conf
@@ -39,7 +39,7 @@ services:
     image: storage_service:srsc_p2
     ports:
       - "8083:8083"
-    command: ["java" ,"-cp" ,"target/srsc-p2-mvn-1.0.jar", "srsc.servers.StorageSystemService.StorageServiceServer"]
+    command: ["java" ,"-cp" ,"target/srsc-p2-mvn-1.0.jar", "srsc.servers.StorageService.StorageServiceServer"]
     volumes:
       - ./certs/ssCrypto:/app/certs/ssCrypto
       - ./configs/storage_server.conf:/app/configs/storage_server.conf
