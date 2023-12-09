@@ -71,20 +71,6 @@ genSelfSignedKeysAndCerts(){
     printf "${4}\n" |\
     keytool -export -alias $1 -keystore "keystore_${2}" -file $3
 
-    # Create .pem from .cer
-    openssl x509 -inform der -in $3 -out $1.pem
-
-    # Create .key file with private key
-    printf "${4}\n${4}\n${4}\n" |\
-    keytool -v -importkeystore -srckeystore keystore_${2} -destkeystore k.p12 -deststoretype PKCS12
-
-    openssl pkcs12 -nocerts -in k.p12 -out privkey.pem -passin pass:$4 -passout pass:$4
-
-    openssl rsa -in privkey.pem -out ${1}_priv.key -passin pass:$4 -passout pass:$4
-
-    rm k.p12
-    rm privkey.pem
-
     cd ..
 }
 
@@ -145,7 +131,7 @@ addAllServersToAllOtherServersTruststores(){
     cd ..
 }
 
-addAllToMainDispatcherTrustore(){
+addAllToMainDispatcherTruststore(){
     cd $md_foldername
 
     # Add other servers
@@ -233,7 +219,7 @@ echo "Clients' Info Generated..."
 #sleep 3
 
 # Add to truststores
-addAllToMainDispatcherTrustore
+addAllToMainDispatcherTruststore
 
 addAllServersToAllOtherServersTruststores
 
