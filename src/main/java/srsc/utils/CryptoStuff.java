@@ -15,6 +15,8 @@ import java.security.cert.CertificateFactory;
 import java.security.spec.KeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 
@@ -38,10 +40,6 @@ public abstract class CryptoStuff {
 
     private static final byte[] IV = { (byte) 14, (byte) 7, (byte) 212, (byte) 157, (byte) 18, (byte) 147, (byte) 221,
             (byte) 49, (byte) 152, (byte) 198, (byte) 74, (byte) 52, (byte) 130, (byte) 156, (byte) 225, (byte) 102 };
-
-    // TODO: Ver se conseguimos fazer um salt dinamico para cada user para usar no login (pbe)
-    private static final byte[] SALT = { (byte) 14, (byte) 7, (byte) 212, (byte) 157, (byte) 18, (byte) 147, (byte) 221,
-            (byte) 49 };
 
     // ===== Secure Random =====
     /**
@@ -97,25 +95,6 @@ public abstract class CryptoStuff {
 
     public static String bytesToB64(byte[] bytes) {
         return Base64.getEncoder().encodeToString(bytes);
-    }
-
-    /**
-     * Hash a byte array
-     * @param content the content to be hashed
-     * @return Base64 of content hash
-     */
-    public static String hashB64(String content) {
-        return hashB64(content.getBytes());
-    }
-
-    /**
-     * Hash a byte array
-     * @param content the content to be hashed
-     * @return Base64 of content hash
-     */
-    public static String hashB64(byte[] content) {
-        byte[] hashed = hash(content);
-        return Base64.getEncoder().encodeToString(hashed);
     }
 
     // ===== Diffie-Hellman Key Exchange =====
@@ -248,13 +227,13 @@ public abstract class CryptoStuff {
     }
 
     // ===== Password Based Encryption =====
-    public static String pbeHashing(String password){
+    public static String pbeHashing(byte[] salt, String password){
         try{
             // TODO: Extract this
             int iterations = 10000; // Number of iterations (adjust based on your security requirements)
             int keyLength = 256;    // Key length in bits
 
-            KeySpec keySpec = new PBEKeySpec(password.toCharArray(), SALT, iterations, keyLength);
+            KeySpec keySpec = new PBEKeySpec(password.toCharArray(), salt, iterations, keyLength);
             SecretKeyFactory keyFactory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
             byte[] hashedBytes = keyFactory.generateSecret(keySpec).getEncoded();
             return Base64.getEncoder().encodeToString(hashedBytes);
@@ -286,10 +265,10 @@ public abstract class CryptoStuff {
      * @param content the content to be encrypted
      * @return the encrypted content
      */
-    public static byte[] pbeEncrypt(Key key, byte[] content) {
+    public static byte[] pbeEncrypt(Key key, byte[] salt, byte[] content) {
         try {
             Cipher cipher = Cipher.getInstance(PBE_ALG);
-            PBEParameterSpec pbeSpec = new PBEParameterSpec(SALT, ITERATION_COUNT);
+            PBEParameterSpec pbeSpec = new PBEParameterSpec(salt, ITERATION_COUNT);
             cipher.init(Cipher.ENCRYPT_MODE, key, pbeSpec);
             return cipher.doFinal(content);
         } catch (Exception e) {
@@ -304,10 +283,10 @@ public abstract class CryptoStuff {
      * @param content the content to be decrypted
      * @return the decrypted content
      */
-    public static byte[] pbeDecrypt(Key key, byte[] content) {
+    public static byte[] pbeDecrypt(Key key, byte[] salt, byte[] content) {
         try {
             Cipher cipher = Cipher.getInstance(PBE_ALG);
-            PBEParameterSpec pbeSpec = new PBEParameterSpec(SALT, ITERATION_COUNT);
+            PBEParameterSpec pbeSpec = new PBEParameterSpec(salt, ITERATION_COUNT);
             cipher.init(Cipher.DECRYPT_MODE, key, pbeSpec);
             return cipher.doFinal(content);
         } catch (Exception e) {

@@ -26,6 +26,14 @@ public enum Command {
         return null;
     }
 
+    public static Command getCommandFromValue(String value){
+        for (Command c : Command.values()) {
+            if (c.value.equals(value))
+                return c;
+        }
+        return null;
+    }
+
     public boolean needsConnection() {
         return this.needsConnection;
     }

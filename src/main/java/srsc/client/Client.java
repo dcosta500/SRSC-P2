@@ -5,6 +5,8 @@ import srsc.utils.*;
 
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 
 public class Client {
@@ -15,6 +17,14 @@ public class Client {
 
     private static SSLSocketFactory factory;
     private static SSLSocket socket;
+
+    private static  final Map<String, byte[]> SALT_MAP = new HashMap<>(Map.ofEntries(
+            Map.entry("alice", new byte[]{(byte) 14, (byte) 7, (byte) 212, (byte) 157, (byte) 18, (byte) 147, (byte) 221, (byte) 49}),
+            Map.entry("bob", new byte[]{(byte) 15, (byte) 8, (byte) 213, (byte) 158, (byte) 19, (byte) 148, (byte) 222, (byte) 50}),
+            Map.entry("carol", new byte[]{(byte) 16, (byte) 9, (byte) 214, (byte) 159, (byte) 20, (byte) 149, (byte) 223, (byte) 51}),
+            Map.entry("david", new byte[]{(byte) 17, (byte) 10, (byte) 215, (byte) 160, (byte) 21, (byte) 150, (byte) 224, (byte) 52}),
+            Map.entry("eric", new byte[]{(byte) 18, (byte) 11, (byte) 216, (byte) 161, (byte) 22, (byte) 151, (byte) 225, (byte) 53})
+    ));
 
     private static void readCommands() {
         // TODO: Add help instruction. Add support for unknown instruction
@@ -77,7 +87,7 @@ public class Client {
             return;
         }
 
-        LoginResponseModel lrm = ClientCommands.login(socket, cmd);
+        LoginResponseModel lrm = ClientCommands.login(socket, cmd, SALT_MAP.get(uid));
         processLoginResponse(lrm);
     }
 
@@ -225,7 +235,7 @@ public class Client {
     // ===== AUX METHODS =====
     private static Command processCommandAndOpenSocket(String cmd) {
         try {
-            Command command = Command.valueOf(cmd.trim().split(" ")[0].toUpperCase());
+            Command command = Command.getCommandFromValue(cmd.trim().split(" ")[0].toLowerCase());
 
             // Only opens the connection for a command that needs it
             if (command.needsConnection()) {
@@ -236,7 +246,7 @@ public class Client {
             }
 
             return command;
-        } catch (IllegalArgumentException e) {
+        } catch (NullPointerException | IllegalArgumentException e) {
             return Command.UNKNOWN;
         } catch (Exception e) {
             // Something unexpected happened

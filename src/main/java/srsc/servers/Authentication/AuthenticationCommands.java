@@ -19,17 +19,17 @@ import java.util.Base64;
 public abstract class AuthenticationCommands {
 
     public static byte[] login(Socket mdSocket, SQL users, byte[] content) {
-        /* 
-        * Data flow:
-        * Receive-1 -> { len + IPclient || len + uid }
-        * Send-1 -> { R (long) || len+Yauth }
-        * Receive-2 -> { len + IPclient || len + Yclient || len + { R }Kpwd }
-        * Send-2 -> send2content || SIGauth(){ len + { len+"auth" || len+Ktoken1024 || len+TSf || Secure Random (long) || len+Kclient,ac }Kdh ||
-        * len+{ len+"auth" || len+Ktoken1024 || len+TSf || Secure Random (long) || len+Kclient,ac }SIGauth }
-        *
-        * Ktoken1024 = { len + Ktoken1024_content || len + { Ktoken1024_content }SIGauth }Kauth,ac
-        * Ktoken1024_content = { len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }
-        */
+        /*
+         * Data flow:
+         * Receive-1 -> { len + IPclient || len + uid }
+         * Send-1 -> { R (long) || len+Yauth }
+         * Receive-2 -> { len + IPclient || len + Yclient || len + { R }Kpwd }
+         * Send-2 -> send2content || SIGauth(){ len + { len+"auth" || len+Ktoken1024 || len+TSf || Secure Random (long) || len+Kclient,ac }Kdh ||
+         * len+{ len+"auth" || len+Ktoken1024 || len+TSf || Secure Random (long) || len+Kclient,ac }SIGauth }
+         *
+         * Ktoken1024 = { len + Ktoken1024_content || len + { Ktoken1024_content }SIGauth }Kauth,ac
+         * Ktoken1024_content = { len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }
+         */
 
         // ===== RECEIVE 1 =====
         // Receive-1 -> { len+IPclient || len+uid }
@@ -48,15 +48,21 @@ public abstract class AuthenticationCommands {
         // Processing
         String conditionR1 = String.format("uid = '%s'", uidR1);
 
-        String hPwd = null;
-        try(ResultSet rs = users.select("uid, canBeAuthenticated, hPwd", conditionR1)) {
+        String hPwd;
+        byte[] salt;
+        try(ResultSet rs = users.select("uid, hPwd, salt, canBeAuthenticated", conditionR1)) {
             if (!rs.next())
                 return MySSLUtils.buildErrorResponse();
 
-            Key key = CryptoStuff.parseSymKeyFromBase64(System.getProperty("PRIV_SYM_KEY"));
+            // extract
+            String hPwdQueried = rs.getString("hPwd");
+            String saltB64 = rs.getString("salt");
 
-            byte[] hPwdEncrypted = Base64.getDecoder().decode(rs.getString("hPwd"));
+            Key key = CryptoStuff.parseSymKeyFromBase64(System.getProperty("PRIV_SYM_KEY"));
+            byte[] hPwdEncrypted = CryptoStuff.b64ToBytes(hPwdQueried);
+
             hPwd = new String(CryptoStuff.symDecrypt(key, hPwdEncrypted), StandardCharsets.UTF_8);
+            salt = CryptoStuff.b64ToBytes(saltB64);
 
             boolean canBeAuthenticated = rs.getBoolean("canBeAuthenticated");
             if (!canBeAuthenticated)
@@ -111,7 +117,7 @@ public abstract class AuthenticationCommands {
 
         Key pbeKey = CryptoStuff.pbeCreateKeyFromPassword(hPwd);
 
-        byte[] receivedSrR2 = CryptoStuff.pbeDecrypt(pbeKey, cipheredSrR2);
+        byte[] receivedSrR2 = CryptoStuff.pbeDecrypt(pbeKey, salt, cipheredSrR2);
         if (receivedSrR2.length == 0) {
             System.out.println("Error decrypting challenge.");
             return MySSLUtils.buildErrorResponse();
@@ -127,13 +133,13 @@ public abstract class AuthenticationCommands {
 
         // ===== SEND 2 =====
         /* *
-        * Send-2 -> { len + {send2content}Kdh || SIGauth(send2content) }
-        *
-        * send2content = { len+"auth" || len+Ktoken1024 || len+TSf || R || len+Kclient,ac }
-        *
-        * Ktoken1024 = { len + Ktoken1024_content || len + { Ktoken1024_content }SIGauth }Kauth,ac
-        * Ktoken1024_content = { len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }
-        * */
+         * Send-2 -> { len + {send2content}Kdh || SIGauth(send2content) }
+         *
+         * send2content = { len+"auth" || len+Ktoken1024 || len+TSf || R || len+Kclient,ac }
+         *
+         * Ktoken1024 = { len + Ktoken1024_content || len + { Ktoken1024_content }SIGauth }Kauth,ac
+         * Ktoken1024_content = { len+uid || len+IPclient || len+IDac || len+TSi || len+TSf || len+Kclient,ac }
+         * */
         PrivateKey privKey = CryptoStuff.getPrivateKeyFromKeystore("as", "as123456");
         if (privKey == null)
             return MySSLUtils.buildErrorResponse();
@@ -163,7 +169,7 @@ public abstract class AuthenticationCommands {
     // ===== Aux Methods =====
     // Login
     private static byte[] createLoginFinalSend(byte[] ktoken1024, byte[] tsfBytes, byte[] client_ac_symKey_bytes,
-            long secureRandom, Key dhKey, PrivateKey privKey) {
+                                               long secureRandom, Key dhKey, PrivateKey privKey) {
 
         byte[] authId_S2 = CommonValues.AUTH_ID.getBytes();
         int finalSend_firstHalf_size = 4 * Integer.BYTES + authId_S2.length + ktoken1024.length + tsfBytes.length
@@ -190,7 +196,7 @@ public abstract class AuthenticationCommands {
     }
 
     private static byte[] createKToken1024(byte[] uidBytes, byte[] ipClientBytes, byte[] tsI, byte[] tsF,
-            byte[] client_ac_symKey_bytes, PrivateKey privKey) {
+                                           byte[] client_ac_symKey_bytes, PrivateKey privKey) {
         ByteBuffer bb;
         byte[] authId_S2 = CommonValues.AC_ID.getBytes();
 

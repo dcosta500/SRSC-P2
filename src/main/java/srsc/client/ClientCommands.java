@@ -20,7 +20,7 @@ public abstract class ClientCommands {
     private static final String DEFAULT_PUT_DIR = System.getProperty("user.dir") + "/clientFiles/putRoot/";
     private static final String DEFAULT_GET_DIR = System.getProperty("user.dir") + "/clientFiles/getRoot/";
 
-    public static LoginResponseModel login(SSLSocket socket, String cmd) {
+    public static LoginResponseModel login(SSLSocket socket, String cmd, byte[] mySalt) {
         /* *
          * Data flow:
          * Send-1 -> { len+uid }
@@ -75,14 +75,14 @@ public abstract class ClientCommands {
 
         byte[] pubKeyClientBytes_R1 = kp.getPublic().getEncoded();
 
-        String hash = CryptoStuff.pbeHashing(pwd);
+        String hash = CryptoStuff.pbeHashing(mySalt, pwd);
         if(hash == null){
             System.out.println("Could not hash password.");
             return null;
         }
 
         Key pbeKey_R1 = CryptoStuff.pbeCreateKeyFromPassword(hash);
-        byte[] srEncryptedBytes_R1 = CryptoStuff.pbeEncrypt(pbeKey_R1, srBytes_r1);
+        byte[] srEncryptedBytes_R1 = CryptoStuff.pbeEncrypt(pbeKey_R1, mySalt, srBytes_r1);
 
         // ===== Send 2 =====
         // Send-2 -> { len+Yclient || len+{ Secure Random }Kpwd }
@@ -94,7 +94,7 @@ public abstract class ClientCommands {
         MySSLUtils.sendData(socket, dataToSend_S2);
 
         // ===== Receive 2 =====
-        // { len+{ len+"auth" || len+Ktoken1024 || len+TSf || Secure Random (long) || len+Kclient,ac }Kdh || 
+        // { len+{ len+"auth" || len+Ktoken1024 || len+TSf || Secure Random (long) || len+Kclient,ac }Kdh ||
         // len+{ len+"auth" || len+Ktoken1024 || len+TSf || Secure Random (long) || len+Kclient,ac }SIGauth }
 
         byte[] dataToReceive_R2 = MySSLUtils.receiveData(socket);
@@ -233,7 +233,7 @@ public abstract class ClientCommands {
         //  kvtoken_content = { len + uid || len + IpClient || len + IdService || len + TSi || len + TSf || len + Kc,s  || len + perms }
 
         bb = ByteBuffer.wrap(content);
-        byte[] key_c_service = MySSLUtils.getNextBytes(bb); // erroring
+        byte[] key_c_service = MySSLUtils.getNextBytes(bb);
         byte[] serviceId_check = MySSLUtils.getNextBytes(bb);
         byte[] timestamp_final = MySSLUtils.getNextBytes(bb);
         byte[] kvToken = MySSLUtils.getNextBytes(bb);

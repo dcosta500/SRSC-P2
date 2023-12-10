@@ -8,6 +8,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.Key;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 
@@ -19,6 +21,14 @@ public class AuthenticationServer {
     private static final String PASSWORD = "as123456";
 
     private static SQL users;
+
+    private static  final Map<String, byte[]> SALT_MAP = new HashMap<>(Map.ofEntries(
+            Map.entry("alice", new byte[]{(byte) 14, (byte) 7, (byte) 212, (byte) 157, (byte) 18, (byte) 147, (byte) 221, (byte) 49}),
+            Map.entry("bob", new byte[]{(byte) 15, (byte) 8, (byte) 213, (byte) 158, (byte) 19, (byte) 148, (byte) 222, (byte) 50}),
+            Map.entry("carol", new byte[]{(byte) 16, (byte) 9, (byte) 214, (byte) 159, (byte) 20, (byte) 149, (byte) 223, (byte) 51}),
+            Map.entry("david", new byte[]{(byte) 17, (byte) 10, (byte) 215, (byte) 160, (byte) 21, (byte) 150, (byte) 224, (byte) 52}),
+            Map.entry("eric", new byte[]{(byte) 18, (byte) 11, (byte) 216, (byte) 161, (byte) 22, (byte) 151, (byte) 225, (byte) 53})
+    ));
 
     private static byte[] executeCommand(Socket socket, DataPackage dp) {
         switch (dp.command()) {
@@ -59,10 +69,12 @@ public class AuthenticationServer {
 
             Key key = CryptoStuff.parseSymKeyFromBase64(keyb64);
             for (String uname : usernames) {
-                String hPwd = CryptoStuff.pbeHashing(uname + "123456");
+                byte[] salt = SALT_MAP.get(uname);
+                String hPwd = CryptoStuff.pbeHashing(salt,uname + "123456");
 
-                String hPwdEncrypted = Base64.getEncoder().encodeToString(CryptoStuff.symEncrypt(key, hPwd.getBytes()));
-                users.insert(uname, uname + "@mail.com", hPwdEncrypted, true);
+                String hPwdEncrypted = CryptoStuff.bytesToB64(CryptoStuff.symEncrypt(key, hPwd.getBytes()));
+                String saltb64 = CryptoStuff.bytesToB64(salt);
+                users.insert(uname, uname + "@mail.com", hPwdEncrypted, saltb64, true);
             }
 
         } catch (Exception e) {
