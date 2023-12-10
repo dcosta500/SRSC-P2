@@ -27,7 +27,6 @@ public class Client {
     ));
 
     private static void readCommands() {
-        // TODO: Add help instruction. Add support for unknown instruction
         Scanner in = new Scanner(System.in);
 
         masterLoop:
@@ -82,12 +81,12 @@ public class Client {
         }
 
         String name = cmd.split(" ")[1];
-        if (!name.equals(uid)) {
+        LoginResponseModel lrm = null;
+        if (!name.equals(uid))
             System.out.printf("This is not %s's computer.\n", name);
-            return;
-        }
+        else
+            lrm = ClientCommands.login(socket, cmd, SALT_MAP.get(uid));
 
-        LoginResponseModel lrm = ClientCommands.login(socket, cmd, SALT_MAP.get(uid));
         processLoginResponse(lrm);
     }
 
@@ -108,7 +107,7 @@ public class Client {
     }
 
     private static void makedir(String cmd) {
-        if (!ClientValidator.makedirValidator(cmd)) {
+        if (!ClientValidator.mkdirValidator(cmd)) {
             System.out.println("Command is not correctly formatted");
             return;
         }
@@ -140,7 +139,7 @@ public class Client {
     }
 
     private static void remove(String cmd) {
-        if (!ClientValidator.putValidator(cmd)) {
+        if (!ClientValidator.removeValidator(cmd)) {
             System.out.println("Command is not correctly formatted");
             return;
         }
@@ -188,7 +187,7 @@ public class Client {
     }
 
     private static void get(String cmd) {
-        if (!ClientValidator.putValidator(cmd)) {
+        if (!ClientValidator.getValidator(cmd)) {
             System.out.println("Command is not correctly formatted");
             return;
         }

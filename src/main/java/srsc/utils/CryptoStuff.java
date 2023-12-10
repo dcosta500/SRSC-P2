@@ -27,16 +27,14 @@ public abstract class CryptoStuff {
     private static final String HASHING_ALG = "SHA256";
     private static final String SECRET_EXCHANGE_ALG = "DH";
     private static final String PBE_ALG = "PBEWithMD5AndTripleDES";
+    private static final int PBE_ITERATIONS = 10_000;
+    private static final int PBE_KEYSIZE = 256;
     private static final String SIG_CIPHERSUITE = "SHA256withRSA";
     private static final String SIG_ALG = "RSA";
     private static final String TRUSTSTORE_TYPE = "JKS";
 
     private static final int DH_KEY_SIZE = 512;
     private static final int SYM_KEY_SIZE = 256;
-
-    // This value in a real situation should be in the tens of thousands but for
-    // simplicity reasons and academic purposes we only use 10
-    private static final int ITERATION_COUNT = 10;
 
     private static final byte[] IV = { (byte) 14, (byte) 7, (byte) 212, (byte) 157, (byte) 18, (byte) 147, (byte) 221,
             (byte) 49, (byte) 152, (byte) 198, (byte) 74, (byte) 52, (byte) 130, (byte) 156, (byte) 225, (byte) 102 };
@@ -229,11 +227,7 @@ public abstract class CryptoStuff {
     // ===== Password Based Encryption =====
     public static String pbeHashing(byte[] salt, String password){
         try{
-            // TODO: Extract this
-            int iterations = 10000; // Number of iterations (adjust based on your security requirements)
-            int keyLength = 256;    // Key length in bits
-
-            KeySpec keySpec = new PBEKeySpec(password.toCharArray(), salt, iterations, keyLength);
+            KeySpec keySpec = new PBEKeySpec(password.toCharArray(), salt, PBE_ITERATIONS, PBE_KEYSIZE);
             SecretKeyFactory keyFactory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
             byte[] hashedBytes = keyFactory.generateSecret(keySpec).getEncoded();
             return Base64.getEncoder().encodeToString(hashedBytes);
@@ -248,10 +242,10 @@ public abstract class CryptoStuff {
      * @param password the password
      * @return the key generated from password
      */
-    public static Key pbeCreateKeyFromPassword(String password) {
+    public static Key pbeCreateKeyFromPassword(byte[] salt, String password) {
         try {
             SecretKeyFactory skf = SecretKeyFactory.getInstance(PBE_ALG);
-            PBEKeySpec pks = new PBEKeySpec(password.toCharArray(), IV, ITERATION_COUNT, SYM_KEY_SIZE); //using IV as salt
+            PBEKeySpec pks = new PBEKeySpec(password.toCharArray(), salt, PBE_ITERATIONS, PBE_KEYSIZE);
             return skf.generateSecret(pks);
         } catch (Exception e) {
             System.out.println("Could not create pbe key.");
@@ -268,7 +262,7 @@ public abstract class CryptoStuff {
     public static byte[] pbeEncrypt(Key key, byte[] salt, byte[] content) {
         try {
             Cipher cipher = Cipher.getInstance(PBE_ALG);
-            PBEParameterSpec pbeSpec = new PBEParameterSpec(salt, ITERATION_COUNT);
+            PBEParameterSpec pbeSpec = new PBEParameterSpec(salt, PBE_ITERATIONS);
             cipher.init(Cipher.ENCRYPT_MODE, key, pbeSpec);
             return cipher.doFinal(content);
         } catch (Exception e) {
@@ -286,7 +280,7 @@ public abstract class CryptoStuff {
     public static byte[] pbeDecrypt(Key key, byte[] salt, byte[] content) {
         try {
             Cipher cipher = Cipher.getInstance(PBE_ALG);
-            PBEParameterSpec pbeSpec = new PBEParameterSpec(salt, ITERATION_COUNT);
+            PBEParameterSpec pbeSpec = new PBEParameterSpec(salt, PBE_ITERATIONS);
             cipher.init(Cipher.DECRYPT_MODE, key, pbeSpec);
             return cipher.doFinal(content);
         } catch (Exception e) {
@@ -336,8 +330,6 @@ public abstract class CryptoStuff {
     }
 
     // ===== File Parsing Methods =====
-    // TODO: Document method
-
     /**
      *
      * @param alias name of the alias

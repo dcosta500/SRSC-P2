@@ -1,12 +1,11 @@
 package srsc.client;
 
-// TODO: Check validity of commands
 public abstract class ClientValidator {
     public static boolean loginValidator(String cmd){
         return cmd.split(" ").length == 3;
     }
 
-    public static boolean makedirValidator(String cmd) {
+    public static boolean mkdirValidator(String cmd) {
         return cmd.split(" ").length == 3;
     }
 
@@ -23,6 +22,14 @@ public abstract class ClientValidator {
     }
 
     public static boolean fileValidator(String cmd){
+        return cmd.split(" ").length == 3;
+    }
+
+    public static boolean getValidator(String cmd) {
+        return cmd.split(" ").length == 3;
+    }
+
+    public static boolean removeValidator(String cmd) {
         return cmd.split(" ").length == 3;
     }
 }

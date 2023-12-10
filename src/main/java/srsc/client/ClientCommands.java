@@ -81,7 +81,7 @@ public abstract class ClientCommands {
             return null;
         }
 
-        Key pbeKey_R1 = CryptoStuff.pbeCreateKeyFromPassword(hash);
+        Key pbeKey_R1 = CryptoStuff.pbeCreateKeyFromPassword(mySalt, hash);
         byte[] srEncryptedBytes_R1 = CryptoStuff.pbeEncrypt(pbeKey_R1, mySalt, srBytes_r1);
 
         // ===== Send 2 =====

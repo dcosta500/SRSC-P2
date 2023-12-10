@@ -115,7 +115,7 @@ public abstract class AuthenticationCommands {
             return MySSLUtils.buildErrorResponse();
         }
 
-        Key pbeKey = CryptoStuff.pbeCreateKeyFromPassword(hPwd);
+        Key pbeKey = CryptoStuff.pbeCreateKeyFromPassword(salt, hPwd);
 
         byte[] receivedSrR2 = CryptoStuff.pbeDecrypt(pbeKey, salt, cipheredSrR2);
         if (receivedSrR2.length == 0) {
